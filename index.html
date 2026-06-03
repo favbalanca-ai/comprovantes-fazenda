@@ -410,15 +410,29 @@ let usuario=null,contaAtual=null,mostContas=false,userSel=null;
 let fotoBase64=null,fotoMime=null,uploadedFile=null;
 let lancamentos=[];
 
-// ── API GAS ─────────────────────────────────────────────
-async function gasPost(body){
-  const r=await fetch(GAS_URL,{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(body),
-    redirect:'follow',
+// ── API GAS (JSONP — compativel com GAS sem CORS) ──────
+// fetch() direto e bloqueado pelo Google (CORS+redirect).
+// JSONP via <script> e a unica forma que funciona do browser.
+function gasPost(body){
+  return new Promise(function(resolve,reject){
+    var cbName='_gcb'+Date.now();
+    var payload=encodeURIComponent(JSON.stringify(body));
+    var url=GAS_URL+'?payload='+payload+'&callback='+cbName;
+    var tag=document.createElement('script');
+    var timer=setTimeout(function(){
+      cleanup();
+      reject(new Error('Timeout GAS 15s'));
+    },15000);
+    window[cbName]=function(data){ cleanup(); resolve(data); };
+    function cleanup(){
+      clearTimeout(timer);
+      delete window[cbName];
+      if(tag.parentNode) tag.parentNode.removeChild(tag);
+    }
+    tag.onerror=function(){ cleanup(); reject(new Error('Erro rede GAS')); };
+    tag.src=url;
+    document.head.appendChild(tag);
   });
-  return r.json();
 }
 
 // ── LOGIN ──
