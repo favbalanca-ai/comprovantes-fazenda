@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comprovantes IA — Fazenda Água Viva</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/dist/tabler-icons.min.css">
+<style>
+:root{
+  --bg:#F7F6F2;
+  --card:#FFFFFF;
+  --border:#E8E6DF;
+  --text:#1C1C1A;
+  --muted:#8A8880;
+  --green:#1A7A5E;
+  --green-light:#E6F4EF;
+  --green-mid:#2FAD85;
+  --amber:#B86E00;
+  --amber-light:#FEF3E2;
+  --red:#A32D2D;
+  --red-light:#FDE8E8;
+  --font:'DM Sans',sans-serif;
+  --mono:'DM Mono',monospace;
+  --radius:12px;
+  --radius-sm:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh}
+input,select,button,textarea{font-family:var(--font)}
+
+/* ── SCREENS ── */
+.screen{display:none}.screen.active{display:block}
+
+/* ── LOGIN ── */
+.login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;background:var(--bg)}
+.login-box{width:100%;max-width:360px}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:2rem}
+.logo-mark{width:44px;height:44px;background:var(--green);border-radius:10px;display:flex;align-items:center;justify-content:center}
+.logo-mark i{font-size:22px;color:#fff}
+.logo-text{font-size:18px;font-weight:600;color:var(--text)}
+.logo-sub{font-size:12px;color:var(--muted);margin-top:1px}
+.login-heading{font-size:26px;font-weight:600;margin-bottom:6px;line-height:1.2}
+.login-sub-h{font-size:14px;color:var(--muted);margin-bottom:1.75rem}
+.user-list{display:flex;flex-direction:column;gap:8px;margin-bottom:1.25rem}
+.user-opt{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:all .15s;background:var(--card)}
+.user-opt:hover{border-color:var(--green);background:var(--green-light)}
+.user-opt.selected{border-color:var(--green);background:var(--green-light)}
+.u-av{width:36px;height:36px;border-radius:50%;background:#D4EDE6;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--green);flex-shrink:0;font-family:var(--mono)}
+.user-opt.selected .u-av{background:var(--green);color:#fff}
+.u-name{font-size:14px;font-weight:500}
+.u-faz{font-size:12px;color:var(--muted)}
+.field-label{font-size:12px;font-weight:500;color:var(--muted);margin-bottom:6px;letter-spacing:.02em}
+.field-input{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:15px;background:var(--card);color:var(--text);outline:none;transition:border .15s;letter-spacing:2px;text-align:center}
+.field-input:focus{border-color:var(--green)}
+.btn-login{width:100%;background:var(--green);color:#fff;border:none;padding:12px;border-radius:var(--radius-sm);font-size:15px;font-weight:600;cursor:pointer;margin-top:14px;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-login:hover{background:#0F5A44}
+.err{color:var(--red);font-size:13px;text-align:center;margin-top:8px;display:none}
+
+/* ── APP ── */
+.app-wrap{max-width:640px;margin:0 auto;padding:1rem 1rem 3rem}
+.app-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 0;margin-bottom:1rem;border-bottom:1px solid var(--border)}
+.app-bar-left{display:flex;align-items:center;gap:8px}
+.app-bar-left i{font-size:20px;color:var(--green)}
+.app-bar-title{font-size:15px;font-weight:600}
+.user-chip{display:flex;align-items:center;gap:7px;padding:6px 12px;background:var(--card);border:1px solid var(--border);border-radius:20px;cursor:pointer;transition:all .15s}
+.user-chip:hover{border-color:var(--green);background:var(--green-light)}
+.chip-av{width:24px;height:24px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;font-family:var(--mono)}
+.chip-name{font-size:13px;font-weight:500}
+
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1.25rem}
+.metric{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px}
+.metric-label{font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:500;letter-spacing:.03em}
+.metric-value{font-size:21px;font-weight:600;font-family:var(--mono)}
+.metric-value.amber{color:var(--amber)}
+.metric-value.red{color:var(--red)}
+.metric-value.green{color:var(--green)}
+
+.tabs{display:flex;gap:2px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:3px;margin-bottom:1.25rem}
+.tab{flex:1;padding:8px 10px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-radius:9px;text-align:center;transition:all .15s;white-space:nowrap}
+.tab.active{background:var(--green);color:#fff}
+.panel{display:none}.panel.active{display:block}
+
+/* ── CONTA CARD ── */
+.conta-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:1rem;border-left:3px solid var(--green)}
+.conta-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.conta-title{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+.auto-pill{font-size:10px;background:var(--green-light);color:var(--green);padding:2px 8px;border-radius:20px;font-weight:600;font-family:var(--mono)}
+.trocar-btn{font-size:12px;color:var(--green);cursor:pointer;font-weight:500;display:flex;align-items:center;gap:3px}
+.conta-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ci-label{font-size:11px;color:var(--muted);margin-bottom:2px}
+.ci-val{font-size:13px;font-weight:500;font-family:var(--mono)}
+.conta-opts{flex-direction:column;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:none}
+.conta-opt{padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:13px;transition:all .15s}
+.conta-opt:hover,.conta-opt.sel{border-color:var(--green);background:var(--green-light);color:var(--green);font-weight:500}
+
+/* ── UPLOAD / OCR ── */
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:2rem 1rem;text-align:center;cursor:pointer;position:relative;transition:all .25s;background:var(--card);margin-bottom:1rem}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--green);background:var(--green-light)}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.uz-icon{font-size:40px;color:var(--green);display:block;margin-bottom:10px}
+.uz-title{font-size:15px;font-weight:600;margin-bottom:4px}
+.uz-sub{font-size:12px;color:var(--muted)}
+
+/* OCR LOADING */
+.ocr-loading{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;text-align:center;margin-bottom:1rem;display:none}
+.ocr-spinner{width:40px;height:40px;border:3px solid var(--green-light);border-top-color:var(--green);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.demo-badge{background:var(--amber-light);border:1px solid var(--amber);border-radius:8px;padding:7px 12px;font-size:12px;color:var(--amber);display:none;align-items:center;gap:6px;margin-bottom:1rem}
+.ocr-steps{display:flex;flex-direction:column;gap:6px;text-align:left;margin-top:1rem}
+.ocr-step{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;transition:color .3s}
+.ocr-step.done{color:var(--green)}
+.ocr-step.active{color:var(--text);font-weight:500}
+.ocr-step i{width:16px;text-align:center;flex-shrink:0}
+
+/* OCR RESULT */
+.ocr-result{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:1rem;overflow:hidden;display:none}
+.ocr-result-header{background:var(--green-light);border-bottom:1px solid #C6E8DC;padding:10px 16px;display:flex;align-items:center;gap:8px}
+.ocr-result-header i{color:var(--green);font-size:18px}
+.ocr-result-header span{font-size:13px;font-weight:600;color:var(--green)}
+.ocr-badge{margin-left:auto;font-size:11px;background:var(--green);color:#fff;padding:2px 8px;border-radius:10px;font-family:var(--mono)}
+.ocr-fields{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.ocr-field{display:flex;flex-direction:column;gap:4px}
+.ocr-field label{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.ocr-field input,.ocr-field select{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg);color:var(--text);outline:none;transition:border .15s;font-family:var(--font)}
+.ocr-field input:focus,.ocr-field select:focus{border-color:var(--green);background:#fff}
+.ocr-field input.ai-filled{border-color:#C6E8DC;background:var(--green-light)}
+.ocr-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ocr-full{grid-column:1/-1}
+.confidence{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);margin-top:2px}
+.conf-bar{width:60px;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.conf-fill{height:100%;border-radius:2px;background:var(--green)}
+
+/* SEARCH DESTINO */
+.search-wrap{position:relative}
+.search-wrap .si{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:15px;pointer-events:none}
+.dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid var(--border);border-radius:var(--radius);max-height:200px;overflow-y:auto;z-index:100;display:none;box-shadow:0 8px 24px rgba(0,0,0,.1)}
+.dropdown.open{display:block}
+.dd-group{font-size:10px;font-weight:700;color:var(--muted);padding:7px 12px 3px;text-transform:uppercase;letter-spacing:.06em;border-top:1px solid var(--bg)}
+.dd-group:first-child{border-top:none}
+.dd-item{padding:8px 12px;font-size:13px;cursor:pointer;transition:background .1s}
+.dd-item:hover{background:var(--green-light);color:var(--green)}
+
+/* PREVIEW */
+.img-preview-wrap{position:relative;margin-bottom:1rem}
+.img-preview{width:100%;max-height:200px;object-fit:contain;border-radius:var(--radius);border:1px solid var(--border);display:block;background:var(--bg)}
+.img-remove{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);color:#fff;border:none;width:28px;height:28px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px}
+.img-retry{position:absolute;bottom:8px;right:8px;background:var(--green);color:#fff;border:none;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;display:flex;align-items:center;gap:4px}
+
+.btn-salvar{width:100%;background:var(--green);color:#fff;border:none;padding:13px;border-radius:var(--radius-sm);font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s;margin-top:4px}
+.btn-salvar:hover{background:#0F5A44}
+.btn-salvar:disabled{background:var(--muted);cursor:not-allowed}
+
+/* LISTA */
+.filter-row{display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
+.filter-sel{padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--card);color:var(--text);outline:none;font-family:var(--font)}
+.filter-sel:focus{border-color:var(--green)}
+.spacer{flex:1}
+.btn-export{padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--card);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:5px;color:var(--text);font-family:var(--font);transition:all .15s}
+.btn-export:hover{border-color:var(--green);color:var(--green);background:var(--green-light)}
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+table{width:100%;font-size:13px;border-collapse:collapse}
+th{text-align:left;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg)}
+td{padding:10px 14px;border-bottom:1px solid var(--bg);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg)}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 8px;border-radius:6px;font-weight:600;font-family:var(--mono)}
+.tag-ok{background:var(--green-light);color:var(--green)}
+.tag-pend{background:var(--amber-light);color:var(--amber)}
+.tag-ai{background:#EEF0FB;color:#3D4FB5}
+
+/* TOAST */
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(80px);background:var(--text);color:#fff;padding:11px 20px;border-radius:10px;font-size:13px;font-weight:500;opacity:0;transition:all .3s;pointer-events:none;z-index:9999;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.green{background:var(--green)}
+.toast.red{background:var(--red)}
+
+@media(max-width:480px){
+  .metrics{grid-template-columns:1fr 1fr}
+  .ocr-grid{grid-template-columns:1fr}
+  .ocr-full{grid-column:1}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="screen-login" class="screen active">
+  <div class="login-page">
+    <div class="login-box">
+      <div class="login-logo">
+        <div class="logo-mark"><i class="ti ti-leaf"></i></div>
+        <div>
+          <div class="logo-text">Água Viva</div>
+          <div class="logo-sub">Gestão de Comprovantes</div>
+        </div>
+      </div>
+      <div class="login-heading">Bom dia,<br>quem é você?</div>
+      <div class="login-sub-h">Selecione seu perfil para continuar</div>
+      <div class="user-list" id="user-list"></div>
+      <div class="field-label">Senha</div>
+      <input type="password" class="field-input" id="senha" placeholder="••••••" onkeydown="if(event.key==='Enter')fazerLogin()">
+      <button class="btn-login" onclick="fazerLogin()"><i class="ti ti-login"></i>Entrar</button>
+      <div class="err" id="err-login">Usuário ou senha incorretos</div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="screen-app" class="screen">
+  <div class="app-wrap">
+    <div class="app-bar">
+      <div class="app-bar-left">
+        <i class="ti ti-receipt"></i>
+        <div class="app-bar-title">Comprovantes</div>
+      </div>
+      <div class="user-chip" onclick="fazerLogout()">
+        <div class="chip-av" id="chip-av"></div>
+        <div class="chip-name" id="chip-name"></div>
+        <i class="ti ti-logout" style="font-size:13px;color:var(--muted)"></i>
+      </div>
+    </div>
+
+    <div class="demo-badge" id="modo-demo-badge">
+      <i class="ti ti-alert-triangle"></i>
+      <span><strong>Modo demonstração</strong> — adicione a URL do GAS no HTML para ativar Drive e Sheets</span>
+    </div>
+
+    <div class="metrics">
+      <div class="metric"><div class="metric-label">Lançamentos</div><div class="metric-value" id="m-total">0</div></div>
+      <div class="metric"><div class="metric-label">Total gasto</div><div class="metric-value amber" id="m-valor">R$ 0</div></div>
+      <div class="metric"><div class="metric-label">Pendentes</div><div class="metric-value red" id="m-pend">0</div></div>
+      <div class="metric"><div class="metric-label">Lidos por IA</div><div class="metric-value green" id="m-ia">0</div></div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('envio')"><i class="ti ti-bolt" style="font-size:13px;vertical-align:-1px;margin-right:3px"></i>Envio Rápido</div>
+      <div class="tab" onclick="switchTab('lista')"><i class="ti ti-list" style="font-size:13px;vertical-align:-1px;margin-right:3px"></i>Lançamentos</div>
+    </div>
+
+    <!-- ENVIO -->
+    <div id="panel-envio" class="panel active">
+
+      <!-- CONTA -->
+      <div class="conta-card">
+        <div class="conta-hdr">
+          <div class="conta-title"><i class="ti ti-credit-card" style="color:var(--green)"></i>Conta de pagamento <span class="auto-pill">AUTO</span></div>
+          <div class="trocar-btn" onclick="toggleContas()"><i class="ti ti-arrows-exchange"></i>Trocar</div>
+        </div>
+        <div class="conta-grid" id="conta-info"></div>
+        <div class="conta-opts" id="conta-opts"></div>
+      </div>
+
+      <!-- UPLOAD -->
+      <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+        <input type="file" id="file-input" accept="image/*,application/pdf" style="display:none" onchange="handleFile(event)">
+        <i class="ti ti-scan big-icon uz-icon" id="uz-icon"></i>
+        <div class="uz-title" id="uz-title">Enviar foto do comprovante</div>
+        <div class="uz-sub" id="uz-sub">A IA lê e preenche os campos automaticamente · JPG, PNG, PDF</div>
+      </div>
+
+      <!-- PREVIEW -->
+      <div class="img-preview-wrap" id="preview-wrap" style="display:none">
+        <img class="img-preview" id="img-preview">
+        <button class="img-remove" onclick="removerFoto()"><i class="ti ti-x"></i></button>
+        <button class="img-retry" onclick="rodarOCR()"><i class="ti ti-refresh"></i>Re-analisar</button>
+      </div>
+
+      <!-- OCR LOADING -->
+      <div class="ocr-loading" id="ocr-loading">
+        <div class="ocr-spinner"></div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:4px">IA lendo o comprovante...</div>
+        <div style="font-size:12px;color:var(--muted)">Aguarde alguns segundos</div>
+        <div class="ocr-steps">
+          <div class="ocr-step" id="step-1"><i class="ti ti-photo"></i>Processando imagem</div>
+          <div class="ocr-step" id="step-2"><i class="ti ti-scan"></i>Extraindo texto do documento</div>
+          <div class="ocr-step" id="step-3"><i class="ti ti-brain"></i>Identificando valor, fornecedor e data</div>
+          <div class="ocr-step" id="step-4"><i class="ti ti-check"></i>Preenchendo campos automaticamente</div>
+        </div>
+      </div>
+
+      <!-- RESULTADO OCR -->
+      <div class="ocr-result" id="ocr-result">
+        <div class="ocr-result-header">
+          <i class="ti ti-sparkles"></i>
+          <span>Dados lidos pela IA — confirme ou edite</span>
+          <div class="ocr-badge" id="conf-badge">●●● ALTA</div>
+        </div>
+        <div class="ocr-fields">
+          <div class="ocr-grid">
+            <div class="ocr-field">
+              <label>Valor (R$)</label>
+              <input type="number" id="f-valor" placeholder="0,00" step="0.01">
+              <div class="confidence"><div class="conf-bar"><div class="conf-fill" id="conf-valor" style="width:0%"></div></div><span id="conf-valor-txt"></span></div>
+            </div>
+            <div class="ocr-field">
+              <label>Data</label>
+              <input type="date" id="f-data">
+            </div>
+            <div class="ocr-field ocr-full">
+              <label>Fornecedor</label>
+              <input type="text" id="f-fornecedor" placeholder="Nome da loja ou empresa">
+              <div class="confidence"><div class="conf-bar"><div class="conf-fill" id="conf-forn" style="width:0%"></div></div><span id="conf-forn-txt"></span></div>
+            </div>
+            <div class="ocr-field">
+              <label>CNPJ</label>
+              <input type="text" id="f-cnpj" placeholder="00.000.000/0001-00" style="font-family:var(--mono)">
+            </div>
+            <div class="ocr-field">
+              <label>Forma de pagamento</label>
+              <select id="f-pgto">
+                <option value="">Selecionar...</option>
+                <option>PIX</option><option>Cartão de crédito</option><option>Boleto</option><option>Dinheiro</option><option>Transferência</option>
+              </select>
+            </div>
+            <div class="ocr-field ocr-full">
+              <label>Destino — máquina, benfeitoria ou insumo</label>
+              <div class="search-wrap">
+                <input type="text" id="f-dest" placeholder="Buscar: NH, trator, fertilizante..." autocomplete="off" oninput="filtrarDest()" onfocus="mostrarDest()">
+                <i class="ti ti-search si"></i>
+                <div class="dropdown" id="dest-dd"></div>
+              </div>
+              <input type="hidden" id="f-dest-val">
+              <input type="hidden" id="f-dest-grupo">
+            </div>
+            <div class="ocr-field ocr-full">
+              <label>Observação <span style="font-weight:400;text-transform:none;letter-spacing:0">(opcional)</span></label>
+              <input type="text" id="f-obs" placeholder="Detalhe adicional...">
+            </div>
+          </div>
+          <button class="btn-salvar" id="btn-salvar" onclick="salvar()">
+            <i class="ti ti-cloud-upload"></i>Salvar e enviar ao Drive
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- LISTA -->
+    <div id="panel-lista" class="panel">
+      <div class="filter-row">
+        <select class="filter-sel" id="fil-status" onchange="renderTabela()">
+          <option value="">Todos</option><option>Enviados</option><option>Pendentes</option>
+        </select>
+        <div class="spacer"></div>
+        <button class="btn-export"><i class="ti ti-file-spreadsheet"></i>Exportar</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Data</th><th>Fornecedor</th><th>Destino</th><th>Valor</th><th>Origem</th><th>Status</th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toast-msg"></span></div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  CONFIGURAÇÃO — cole aqui a URL do seu Web App GAS
+// ══════════════════════════════════════════════════════
+const GAS_URL = 'COLE_AQUI_A_URL_DO_WEB_APP';
+// Exemplo:
+// const GAS_URL = 'https://script.google.com/macros/s/AKfy.../exec';
+
+// ── MODO OFFLINE (fallback quando GAS_URL não configurada) ──
+const MODO_DEMO = !GAS_URL || GAS_URL.includes('COLE_AQUI');
+
+// ── DADOS LOCAIS (usados no modo demo) ──────────────────
+const USUARIOS=[
+  {id:'jovane',nome:'Jovane Gatto Cossul',sigla:'JG',fazenda:'Fazenda Água Viva',senha:'1234',
+   contas:[
+     {label:'Banco do Brasil — CC',banco:'Banco do Brasil',agencia:'1234-5',conta:'00012-3',pix:'jovane@aguaviva.agr.br'},
+     {label:'Sicredi — CC',banco:'Sicredi',agencia:'0056',conta:'78901-2',pix:'11.222.333/0001-44'},
+   ]},
+  {id:'joao',nome:'João Germano Cossul',sigla:'JC',fazenda:'Fazenda Roncador',senha:'1234',
+   contas:[
+     {label:'Caixa Econômica — CC',banco:'Caixa Econômica',agencia:'3210',conta:'00056-7',pix:'joao@roncador.agr.br'},
+   ]},
+  {id:'joaquim',nome:'Joaquim Gatto Cossul',sigla:'QC',fazenda:'Fazenda Espora',senha:'1234',
+   contas:[
+     {label:'Bradesco — CC',banco:'Bradesco',agencia:'4567',conta:'00034-8',pix:'joaquim@espora.agr.br'},
+   ]},
+];
+
+const MAQUINAS={
+  'AVIÃO AGRÍCOLA':['AIR TRATOR AT-502B','AVIAO PR-ZRM','AVIÃO'],
+  'CAMINHÕES':['CAMINHAO-VOLVO VM260','CAMINHAO-VOLVO NH380','CAMINHAO-WV 7.100','CAMINHAO-MB 1313','CAMINHÃO MB 1620','CAMINHÃO MB1113 CAÇAMBA','CAMINHÃO-VOLVO FH 540'],
+  'CARRETA AGRÍCOLA':['TRANSBORDO SANTAL','REBOQUE 3000 KG','CARRETO ADUBO 20000','CARRETO ADUBO ESPORA','CARRETA PLATAFORMA CR7.8'],
+  'COLHEDORAS':['COLHETADEIRA NH-CR9060','COLHETADEIRA CASE 2388','COLHEITADEIRA CR 8.90 NEW HOLLAND','COLHETADEIRA CR7.80'],
+  'DISTRIBUIDOR FERTILIZANTES':['DISTRIBUIDOR BRUTUS 12000','DISTRIBUIDOR HERCULES 10000','DISTRIBUIDOR JAN 20000','KAMAQ 6000'],
+  'EQUIPAMENTOS':['BALANÇA 120/240T/H','GUINDASTE GRM 14.000','HANGAR','GERADOR GMG 500 KVA','SECADOR PALINI 15 TON 01','SECADOR PALINI 15 TON 02','PRÉ-LIMPEZA 120TON/H','EMBUTIDORA SILO BOLSA - AGUA VIVA','EMBUTIDORA SILO BOLSA - ESPORA','EXTRATORA SILO BOLSA','GRUPO GERADOR CAT 130KWA','MOTO SERRA'],
+  'IMPLEMENTOS':['ESPALHADOR JAN 12000','ESPALHADOR JAN 20000','GRADE HD 9017','TRITON JAN 4600','ROÇADEIRA ECOLOGICA','CARRETA GRANELEIRA','GRADE NIVELADORA','GRADE PESADA 32','CEIFADEIRA CONJUNTO DUPLO','SEMIRREBOQUE FH 540-1','DOLLY FH540'],
+  'MAQUINAS PESADAS':['PA CARREGADEIRA LG 835 - AGUA VIVA','PA CARREGADEIRA LG 835','PATROLA'],
+  'PIVÔ AGRÍCOLA':['PIVO CENTRAL','P01 200ha','P02 120ha','P01 60ha','P02 80ha','P03 118ha','P04 130ha'],
+  'PLATAFORMAS':['PLATAFORMA 740 CF30','PLATAFORMA MILHO BRAVA 11','PLATAFORMA COLHE TUDO','PLATAFORMA 880 CF45','PLATAFORMA MACDON 35F'],
+  'PULVERIZADORES':['PULVERIZADOR JD4730','JACTO UNIPORT 2000','AVIAO PAWNEE 260','TRATADOR SEMENTE TREVISAN 1000','PULVERIZADOR JACTO ARBUS 4000'],
+  'SEMEADORAS':['PLANTADEIRA HORSCH MAESTRO DUO 36.50','PLANTADEIRA CASE ASM 1213','PLANTADEIRA JD2122','SEMEADORA PAMPEANA','PLANTADEIRA CASE 2213'],
+  'TRATORES':['TRATOR CASE STEIGER 420','TRATOR CASE MAGNUM 340','EMPILHADEIRA CPCD-25','TRATOR NH T7.260','TRATOR VALTRA BH 180','TRATOR JD 5600','TRATOR JD-6125J','TRATOR NH 7630','TRATOR NH T8.355','TRATOR JD 7505','TRATOR JD 7500','TRATOR NH-TL 75','TRATOR MF-290','TRATOR CBT 8060','TRATOR MF-65'],
+  'VEÍCULOS':['TOYOTA HILUX - JOAQUIM','TOYOTA HILUX - JOVANE','S10 LTZ - FAZENDA','S10 LTZ - JOÃO','RANGER VITOR','TOYOTA COROLLA CROSS 2.0','D20','TOYOTA HILUX - VITOR','TOYOTA HILUX - ELESIO'],
+};
+const EXTRAS={
+  'BENFEITORIAS':['Construção civil','Elétrica','Cercas e porteiras','Irrigação','Equipamentos fixos','Material de limpeza'],
+  'INSUMOS AGRÍCOLAS':['Defensivos / Acaricidas','Fertilizantes','Sementes','Embalagens','Análises de solo','Serviços técnicos','Combustível'],
+};
+
+let usuario=null,contaAtual=null,mostContas=false,userSel=null;
+let fotoBase64=null,fotoMime=null,uploadedFile=null;
+let lancamentos=[];
+
+// ── API GAS ─────────────────────────────────────────────
+async function gasPost(body){
+  const r=await fetch(GAS_URL,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(body),
+    redirect:'follow',
+  });
+  return r.json();
+}
+
+// ── LOGIN ──
+async function renderLoginUsers(){
+  // Tenta carregar usuários do GAS; fallback para lista local
+  if(!MODO_DEMO){
+    try{
+      const res=await gasPost({acao:'usuarios'});
+      if(res.ok && res.usuarios?.length){
+        _renderUserCards(res.usuarios);
+        return;
+      }
+    }catch(e){ console.warn('GAS indisponível, usando lista local'); }
+  }
+  _renderUserCards(USUARIOS.map(u=>({id:u.id,nome:u.nome,sigla:u.sigla,fazenda:u.fazenda})));
+}
+
+function _renderUserCards(lista){
+  document.getElementById('user-list').innerHTML=lista.map(u=>`
+    <div class="user-opt" id="uopt-${u.id}" onclick="selUser('${u.id}')">
+      <div class="u-av" id="uav-${u.id}">${u.sigla}</div>
+      <div><div class="u-name">${u.nome.split(' ').slice(0,2).join(' ')}</div><div class="u-faz">${u.fazenda}</div></div>
+    </div>`).join('');
+}
+
+function selUser(id){
+  userSel=id;
+  document.querySelectorAll('.user-opt').forEach(el=>el.classList.remove('selected'));
+  document.getElementById('uopt-'+id).classList.add('selected');
+  document.getElementById('senha').focus();
+}
+
+async function fazerLogin(){
+  const err=document.getElementById('err-login');
+  if(!userSel){err.textContent='Selecione um usuário.';err.style.display='block';return;}
+  const senha=document.getElementById('senha').value;
+  if(!senha){err.textContent='Digite a senha.';err.style.display='block';return;}
+
+  // Botão loading
+  const btn=document.querySelector('.btn-login');
+  btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>Entrando...';
+  btn.disabled=true;
+
+  try{
+    let u=null;
+
+    if(!MODO_DEMO){
+      // Login via GAS (valida no servidor)
+      const res=await gasPost({acao:'login',usuario_id:userSel,senha});
+      if(!res.ok){
+        err.textContent='Usuário ou senha incorretos';err.style.display='block';
+        _resetBtn(btn);return;
+      }
+      // Montar objeto usuario com contas do GAS
+      const ud=res.usuario;
+      u={
+        id:ud.id, nome:ud.nome, sigla:ud.sigla, fazenda:ud.fazenda,
+        contas:[{label:ud.banco+' — CC',banco:ud.banco,agencia:ud.agencia,conta:ud.conta,pix:ud.pix}]
+      };
+    } else {
+      // Modo demo — valida localmente
+      const local=USUARIOS.find(x=>x.id===userSel);
+      if(!local||local.senha!==senha){
+        err.textContent='Usuário ou senha incorretos';err.style.display='block';
+        _resetBtn(btn);return;
+      }
+      u=local;
+    }
+
+    err.style.display='none';
+    usuario=u; contaAtual=u.contas[0];
+    document.getElementById('screen-login').classList.remove('active');
+    document.getElementById('screen-app').classList.add('active');
+    iniciarApp();
+
+  }catch(e){
+    err.textContent='Erro de conexão — verifique a URL do GAS';
+    err.style.display='block';
+  }
+  _resetBtn(btn);
+}
+
+function _resetBtn(btn){
+  btn.innerHTML='<i class="ti ti-login"></i>Entrar';
+  btn.disabled=false;
+}
+
+function fazerLogout(){
+  usuario=null;contaAtual=null;userSel=null;fotoBase64=null;uploadedFile=null;lancamentos=[];
+  document.getElementById('senha').value='';
+  document.querySelectorAll('.user-opt').forEach(el=>el.classList.remove('selected'));
+  document.getElementById('screen-app').classList.remove('active');
+  document.getElementById('screen-login').classList.add('active');
+  resetarEnvio();switchTab('envio');
+}
+
+async function iniciarApp(){
+  document.getElementById('chip-av').textContent=usuario.sigla;
+  document.getElementById('chip-name').textContent=usuario.nome.split(' ')[0];
+  if(MODO_DEMO){
+    const badge=document.getElementById('modo-demo-badge');
+    if(badge) badge.style.display='flex';
+  }
+  renderConta();
+  await carregarLancamentos();
+}
+
+async function carregarLancamentos(){
+  if(MODO_DEMO){
+    // dados de demonstração
+    lancamentos=[
+      {data:'2026-06-01',fornecedor:'Agros MG',destino:'COLHEITADEIRA CR 8.90 NEW HOLLAND',valor:1250,conta:contaAtual.label,comp:true,ia:true},
+      {data:'2026-05-28',fornecedor:'Construmix',destino:'Construção civil',valor:4800,conta:contaAtual.label,comp:true,ia:false},
+      {data:'2026-05-20',fornecedor:'Copercitrus',destino:'Fertilizantes',valor:3200,conta:contaAtual.label,comp:false,ia:false},
+    ];
+  } else {
+    try{
+      const res=await gasPost({acao:'listar',usuario_id:usuario.id,limite:50});
+      if(res.ok) lancamentos=res.lancamentos.map(l=>({
+        data:l.data, fornecedor:l.fornecedor||'—', destino:l.destino,
+        valor:parseFloat(l.valor)||0, conta:l.conta,
+        comp:l.status==='Enviado', ia:l.lido_ia,
+        url:l.url,
+      }));
+    }catch(e){ console.warn('Erro ao carregar lançamentos:', e); }
+  }
+  atualizaMetricas();
+}
+
+// ── CONTA ──
+function renderConta(){
+  const c=contaAtual;
+  document.getElementById('conta-info').innerHTML=`
+    <div><div class="ci-label">Banco</div><div class="ci-val">${c.banco}</div></div>
+    <div><div class="ci-label">Conta</div><div class="ci-val">${c.conta}</div></div>
+    <div><div class="ci-label">Agência</div><div class="ci-val">${c.agencia}</div></div>
+    <div><div class="ci-label">PIX</div><div class="ci-val" style="font-size:12px">${c.pix}</div></div>`;
+  document.getElementById('conta-opts').innerHTML=usuario.contas.map((ct,i)=>`
+    <div class="conta-opt${ct===contaAtual?' sel':''}" onclick="trocarConta(${i})">${ct.label}</div>`).join('');
+}
+function toggleContas(){
+  mostContas=!mostContas;
+  const el=document.getElementById('conta-opts');
+  el.style.display=mostContas?'flex':'none';
+}
+function trocarConta(i){
+  contaAtual=usuario.contas[i];mostContas=false;
+  document.getElementById('conta-opts').style.display='none';
+  renderConta();showToast('Conta: '+contaAtual.banco,'green');
+}
+
+// ── FILE / OCR ──
+function handleFile(e){
+  const f=e.target.files[0];if(!f) return;
+  uploadedFile=f;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    const result=ev.target.result;
+    fotoBase64=result.split(',')[1];
+    fotoMime=f.type||'image/jpeg';
+    if(f.type.startsWith('image/')){
+      document.getElementById('img-preview').src=result;
+      document.getElementById('preview-wrap').style.display='block';
+    }
+    document.getElementById('upload-zone').style.display='none';
+    rodarOCR();
+  };
+  reader.readAsDataURL(f);
+}
+
+function removerFoto(){
+  fotoBase64=null;uploadedFile=null;
+  document.getElementById('preview-wrap').style.display='none';
+  document.getElementById('upload-zone').style.display='block';
+  document.getElementById('ocr-result').style.display='none';
+  document.getElementById('file-input').value='';
+}
+
+async function rodarOCR(){
+  if(!fotoBase64){showToast('Nenhuma foto carregada','red');return;}
+  document.getElementById('ocr-loading').style.display='block';
+  document.getElementById('ocr-result').style.display='none';
+
+  // anima steps
+  const steps=['step-1','step-2','step-3','step-4'];
+  steps.forEach(s=>{const el=document.getElementById(s);el.classList.remove('done','active');});
+  let si=0;
+  const stepTimer=setInterval(()=>{
+    if(si>0) document.getElementById(steps[si-1]).classList.replace('active','done');
+    if(si<steps.length){document.getElementById(steps[si]).classList.add('active');si++;}
+  },600);
+
+  const prompt=`Você é um sistema de OCR especializado em comprovantes fiscais brasileiros (cupons, NF-e, DANFE, recibos, PIX).
+
+Analise a imagem e extraia as informações a seguir. Responda APENAS com JSON válido, sem explicações, sem markdown.
+
+Formato obrigatório:
+{
+  "valor": <número decimal, ex: 1250.00>,
+  "data": "<YYYY-MM-DD>",
+  "fornecedor": "<nome da empresa/loja>",
+  "cnpj": "<CNPJ formatado ou null>",
+  "forma_pagamento": "<PIX|Cartão de crédito|Boleto|Dinheiro|Transferência|null>",
+  "descricao": "<breve descrição dos itens principais, máx 80 chars>",
+  "confianca": {
+    "valor": <0-100>,
+    "fornecedor": <0-100>,
+    "geral": <0-100>
+  }
+}
+
+Se não conseguir identificar um campo, use null. Nunca invente dados.`;
+
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        messages:[{
+          role:'user',
+          content:[
+            {type:'image',source:{type:'base64',media_type:fotoMime,data:fotoBase64}},
+            {type:'text',text:prompt}
+          ]
+        }]
+      })
+    });
+    const data=await resp.json();
+    clearInterval(stepTimer);
+    steps.forEach(s=>document.getElementById(s).classList.add('done'));
+
+    let txt=data.content?.find(b=>b.type==='text')?.text||'{}';
+    txt=txt.replace(/```json|```/g,'').trim();
+    const ocr=JSON.parse(txt);
+
+    setTimeout(()=>{
+      document.getElementById('ocr-loading').style.display='none';
+      preencherCampos(ocr);
+    },400);
+
+  } catch(err){
+    clearInterval(stepTimer);
+    document.getElementById('ocr-loading').style.display='none';
+    showToast('Erro na leitura por IA. Preencha manualmente.','red');
+    document.getElementById('ocr-result').style.display='block';
+    document.getElementById('f-data').value=new Date().toISOString().split('T')[0];
+  }
+}
+
+function preencherCampos(ocr){
+  const mark=(id)=>{
+    const el=document.getElementById(id);
+    if(el&&el.value) el.classList.add('ai-filled');
+  };
+
+  if(ocr.valor!=null){document.getElementById('f-valor').value=ocr.valor;}
+  if(ocr.data){document.getElementById('f-data').value=ocr.data;}
+  else{document.getElementById('f-data').value=new Date().toISOString().split('T')[0];}
+  if(ocr.fornecedor){document.getElementById('f-fornecedor').value=ocr.fornecedor;}
+  if(ocr.cnpj){document.getElementById('f-cnpj').value=ocr.cnpj;}
+  if(ocr.forma_pagamento){document.getElementById('f-pgto').value=ocr.forma_pagamento;}
+  if(ocr.descricao){document.getElementById('f-obs').value=ocr.descricao;}
+
+  // confidence
+  const cv=ocr.confianca?.valor??0;
+  const cf=ocr.confianca?.fornecedor??0;
+  const cg=ocr.confianca?.geral??0;
+  document.getElementById('conf-valor').style.width=cv+'%';
+  document.getElementById('conf-valor-txt').textContent=cv+'% confiança';
+  document.getElementById('conf-forn').style.width=cf+'%';
+  document.getElementById('conf-forn-txt').textContent=cf+'% confiança';
+
+  const badge=document.getElementById('conf-badge');
+  if(cg>=80){badge.textContent='●●● ALTA';badge.style.background='var(--green)';}
+  else if(cg>=50){badge.textContent='●●○ MÉDIA';badge.style.background='var(--amber)';}
+  else{badge.textContent='●○○ BAIXA';badge.style.background='var(--red)';}
+
+  ['f-valor','f-fornecedor','f-cnpj'].forEach(mark);
+
+  document.getElementById('ocr-result').style.display='block';
+  showToast('IA preencheu os campos — confirme os dados','green');
+}
+
+// ── DESTINO ──
+function buildDestOpts(q){
+  let html='';
+  Object.entries(MAQUINAS).forEach(([g,items])=>{
+    const hits=items.filter(m=>!q||m.toLowerCase().includes(q)||g.toLowerCase().includes(q));
+    if(hits.length){
+      html+=`<div class="dd-group">${g}</div>`;
+      hits.slice(0,5).forEach(m=>{html+=`<div class="dd-item" onclick="selDest('${m.replace(/'/g,"\\'")}','${g.replace(/'/g,"\\'")}')"> ${m}</div>`;});
+    }
+  });
+  Object.entries(EXTRAS).forEach(([g,items])=>{
+    const hits=items.filter(m=>!q||m.toLowerCase().includes(q)||g.toLowerCase().includes(q));
+    if(hits.length){
+      html+=`<div class="dd-group">${g}</div>`;
+      hits.forEach(m=>{html+=`<div class="dd-item" onclick="selDest('${m.replace(/'/g,"\\'")}','${g.replace(/'/g,"\\'")}')"> ${m}</div>`;});
+    }
+  });
+  return html;
+}
+function filtrarDest(){
+  const q=document.getElementById('f-dest').value.toLowerCase();
+  const dd=document.getElementById('dest-dd');
+  dd.innerHTML=buildDestOpts(q)||'<div style="padding:10px;font-size:13px;color:var(--muted)">Nenhum resultado</div>';
+  dd.classList.toggle('open',q.length>0);
+}
+function mostrarDest(){
+  const q=document.getElementById('f-dest').value.toLowerCase();
+  const dd=document.getElementById('dest-dd');
+  if(!q){dd.innerHTML=buildDestOpts('');dd.classList.add('open');}
+}
+function selDest(nome,grupo){
+  document.getElementById('f-dest').value=nome;
+  document.getElementById('f-dest-val').value=nome;
+  document.getElementById('f-dest-grupo').value=grupo;
+  document.getElementById('dest-dd').classList.remove('open');
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('#f-dest')&&!e.target.closest('#dest-dd'))
+    document.getElementById('dest-dd').classList.remove('open');
+});
+
+// ── SALVAR ──
+async function salvar(){
+  const val=parseFloat(document.getElementById('f-valor').value);
+  const dest=document.getElementById('f-dest-val').value||document.getElementById('f-dest').value;
+  const grupo=document.getElementById('f-dest-grupo').value||'GERAL';
+  if(!dest||isNaN(val)||val<=0){showToast('Preencha destino e valor','red');return;}
+
+  const btn=document.getElementById('btn-salvar');
+  btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>Salvando...';
+  btn.disabled=true;
+
+  const payload={
+    acao:'salvar',
+    usuario_id:  usuario.id,
+    fazenda:     usuario.fazenda,
+    fornecedor:  document.getElementById('f-fornecedor').value||'',
+    cnpj:        document.getElementById('f-cnpj').value||'',
+    valor:       val,
+    forma_pgto:  document.getElementById('f-pgto').value||'',
+    conta:       contaAtual.label,
+    destino:     dest,
+    grupo:       grupo,
+    observacao:  document.getElementById('f-obs').value||'',
+    lido_ia:     !!fotoBase64,
+    confianca_ia:parseInt(document.getElementById('conf-badge').textContent.match(/\d+/)?.[0])||null,
+    data_compra: document.getElementById('f-data').value||new Date().toISOString().split('T')[0],
+    foto_base64: fotoBase64||null,
+    foto_mime:   fotoMime||null,
+    foto_nome:   uploadedFile?.name||null,
+  };
+
+  let urlDrive='';
+  if(!MODO_DEMO){
+    try{
+      showToast('Enviando ao Drive...','');
+      const res=await gasPost(payload);
+      if(res.ok){
+        urlDrive=res.url_comprovante||'';
+        showToast('Salvo no Sheets e Drive ✓','green');
+      } else {
+        showToast('Erro GAS: '+(res.erro||'desconhecido'),'red');
+      }
+    }catch(e){
+      showToast('Erro de conexão — salvo localmente','red');
+    }
+  } else {
+    showToast('Modo demo — não enviado ao Drive','');
+  }
+
+  lancamentos.unshift({
+    data:payload.data_compra,
+    fornecedor:payload.fornecedor||'—',
+    destino:dest, valor:val,
+    conta:contaAtual.label,
+    comp:!!(uploadedFile||urlDrive),
+    ia:!!fotoBase64, url:urlDrive,
+  });
+  atualizaMetricas();
+  btn.innerHTML='<i class="ti ti-cloud-upload"></i>Salvar e enviar ao Drive';
+  btn.disabled=false;
+  resetarEnvio();
+}
+
+function resetarEnvio(){
+  fotoBase64=null;uploadedFile=null;
+  document.getElementById('upload-zone').style.display='block';
+  document.getElementById('preview-wrap').style.display='none';
+  document.getElementById('ocr-loading').style.display='none';
+  document.getElementById('ocr-result').style.display='none';
+  document.getElementById('file-input').value='';
+  ['f-valor','f-data','f-fornecedor','f-cnpj','f-obs','f-dest','f-dest-val','f-dest-grupo'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-pgto').value='';
+  document.querySelectorAll('.ai-filled').forEach(el=>el.classList.remove('ai-filled'));
+}
+
+// ── TABS / LISTA ──
+function switchTab(t){
+  ['envio','lista'].forEach((n,i)=>{
+    document.querySelectorAll('.tab')[i].classList.toggle('active',n===t);
+    document.getElementById('panel-'+n).classList.toggle('active',n===t);
+  });
+  if(t==='lista') renderTabela();
+}
+function renderTabela(){
+  const fs=document.getElementById('fil-status').value;
+  const rows=lancamentos.filter(l=>{
+    if(fs==='Enviados'&&!l.comp) return false;
+    if(fs==='Pendentes'&&l.comp) return false;
+    return true;
+  });
+  document.getElementById('tbody').innerHTML=rows.length===0
+    ? `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--muted)">Nenhum lançamento encontrado</td></tr>`
+    : rows.map(l=>`<tr>
+    <td style="font-family:var(--mono);font-size:12px">${l.data||'—'}</td>
+    <td style="font-weight:500">${l.fornecedor||'—'}</td>
+    <td style="font-size:12px;color:var(--muted)">${l.destino||'—'}</td>
+    <td style="font-weight:600;font-family:var(--mono)">R$ ${(l.valor||0).toLocaleString('pt-BR')}</td>
+    <td>${l.ia?'<span class="tag tag-ai"><i class="ti ti-sparkles"></i>IA</span>':'<span class="tag" style="background:var(--bg);color:var(--muted)">Manual</span>'}</td>
+    <td>${l.comp
+      ? (l.url ? `<a href="${l.url}" target="_blank" class="tag tag-ok" style="text-decoration:none"><i class="ti ti-check"></i>Drive ↗</a>`
+               : '<span class="tag tag-ok"><i class="ti ti-check"></i>OK</span>')
+      : '<span class="tag tag-pend"><i class="ti ti-clock"></i>Pendente</span>'}</td>
+  </tr>`).join('');
+}
+function atualizaMetricas(){
+  document.getElementById('m-total').textContent=lancamentos.length;
+  document.getElementById('m-valor').textContent='R$ '+lancamentos.reduce((s,l)=>s+l.valor,0).toLocaleString('pt-BR');
+  document.getElementById('m-pend').textContent=lancamentos.filter(l=>!l.comp).length;
+  document.getElementById('m-ia').textContent=lancamentos.filter(l=>l.ia).length;
+}
+
+// ── TOAST ──
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast'+(type?' '+type:'');
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+// ── INIT ──
+renderLoginUsers();
+</script>
+</body>
+</html>
