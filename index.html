@@ -352,10 +352,10 @@ tr:hover td{background:var(--bg)}
               <input type="text" id="f-obs" placeholder="Detalhe adicional...">
             </div>
           </div>
-          <button class="btn-trocar-foto" onclick="triggerNovaFoto()">
-            <input type="file" id="file-trocar" accept="image/*,application/pdf" style="display:none" onchange="handleFile(event)">
-            <i class="ti ti-camera-rotate"></i>Trocar foto / Re-analisar
-          </button>
+          <label class="btn-trocar-foto" style="cursor:pointer">
+            <input type="file" accept="image/*,application/pdf" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%" onchange="handleFile(event)">
+            <i class="ti ti-camera-rotate"></i>Trocar foto / Re-analisar com nova imagem
+          </label>
           <button class="btn-salvar" id="btn-salvar" onclick="salvar()">
             <i class="ti ti-cloud-upload"></i>Salvar e enviar ao Drive
           </button>
@@ -615,19 +615,94 @@ function trocarConta(i){
 function handleFile(e){
   const f=e.target.files[0];if(!f) return;
   uploadedFile=f;
+  // Esconder zona de upload e falha
+  document.getElementById('upload-zone').style.display='none';
+  document.getElementById('ocr-fail').style.display='none';
+  document.getElementById('ocr-result').style.display='none';
+
+  if(f.type==='application/pdf'){
+    _processarPDF(f);
+  } else {
+    _processarImagem(f);
+  }
+}
+
+function _processarImagem(f){
   const reader=new FileReader();
   reader.onload=function(ev){
     const result=ev.target.result;
     fotoBase64=result.split(',')[1];
-    fotoMime=f.type||'image/jpeg';
-    if(f.type.startsWith('image/')){
-      document.getElementById('img-preview').src=result;
-      document.getElementById('preview-wrap').style.display='block';
-    }
-    document.getElementById('upload-zone').style.display='none';
+    fotoMime='image/jpeg';
+    document.getElementById('img-preview').src=result;
+    document.getElementById('preview-wrap').style.display='block';
     rodarOCR();
   };
   reader.readAsDataURL(f);
+}
+
+function _processarPDF(f){
+  // Mostrar loading imediatamente
+  document.getElementById('ocr-loading').style.display='block';
+  document.getElementById('preview-wrap').style.display='none';
+  _setStep(0);
+
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      const dataUrl=ev.target.result;
+      fotoBase64=dataUrl.split(',')[1];
+      fotoMime='application/pdf';
+      _setStep(1);
+
+      // Preview: ícone PDF em vez de imagem
+      const wrap=document.getElementById('preview-wrap');
+      const szKB=(uploadedFile.size/1024).toFixed(0);
+      const nome=uploadedFile.name;
+      document.getElementById('img-preview').style.display='none';
+      // Inserir card de preview PDF sem destruir os inputs ocultos
+      const existing=wrap.querySelector('.pdf-preview-card');
+      if(existing) existing.remove();
+      const card=document.createElement('div');
+      card.className='pdf-preview-card';
+      card.style.cssText='background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:1rem';
+      card.innerHTML='<div style="width:42px;height:42px;background:#FDE8E8;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-file-type-pdf" style="font-size:24px;color:#A32D2D"></i></div>'
+        +'<div style="flex:1;overflow:hidden"><div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+nome+'</div>'
+        +'<div style="font-size:12px;color:var(--muted)">'+szKB+' KB · PDF — IA lendo...</div></div>'
+        +'<button onclick="removerFoto()" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:20px;padding:4px"><i class="ti ti-x"></i></button>';
+      wrap.insertBefore(card, wrap.firstChild);
+      wrap.style.display='block';
+      _setStep(2);
+
+      // Rodar OCR com PDF base64 direto (Claude suporta PDF nativo)
+      rodarOCR();
+
+    }catch(err){
+      console.error('Erro PDF:',err);
+      document.getElementById('ocr-loading').style.display='none';
+      document.getElementById('ocr-fail').style.display='block';
+      showToast('Erro ao processar PDF','red');
+    }
+  };
+  reader.readAsDataURL(f);
+}
+
+function _loadScript(src){
+  return new Promise(function(res,rej){
+    if(document.querySelector('script[src="'+src+'"]')){res();return;}
+    var s=document.createElement('script');
+    s.src=src;s.onload=res;s.onerror=rej;
+    document.head.appendChild(s);
+  });
+}
+
+function _setStep(n){
+  const steps=['step-1','step-2','step-3','step-4'];
+  steps.forEach(function(s,i){
+    const el=document.getElementById(s);
+    el.classList.remove('done','active');
+    if(i<n) el.classList.add('done');
+    else if(i===n) el.classList.add('active');
+  });
 }
 
 function removerFoto(){
@@ -643,36 +718,35 @@ async function rodarOCR(){
   if(!fotoBase64){showToast('Nenhuma foto carregada','red');return;}
   document.getElementById('ocr-loading').style.display='block';
   document.getElementById('ocr-result').style.display='none';
+  document.getElementById('ocr-fail').style.display='none';
 
-  // anima steps
+  // anima steps (só se ainda não animando pelo PDF)
   const steps=['step-1','step-2','step-3','step-4'];
-  steps.forEach(s=>{const el=document.getElementById(s);el.classList.remove('done','active');});
+  const jaAnimando=document.getElementById('step-3').classList.contains('active');
+  if(!jaAnimando){
+    steps.forEach(s=>{const el=document.getElementById(s);el.classList.remove('done','active');});
+  }
   let si=0;
   const stepTimer=setInterval(()=>{
-    if(si>0) document.getElementById(steps[si-1]).classList.replace('active','done');
+    if(si>0){ try{document.getElementById(steps[si-1]).classList.replace('active','done');}catch(e){} }
     if(si<steps.length){document.getElementById(steps[si]).classList.add('active');si++;}
   },600);
 
-  const prompt=`Você é um sistema de OCR especializado em comprovantes fiscais brasileiros (cupons, NF-e, DANFE, recibos, PIX).
+  const prompt=`Você é um sistema de OCR especializado em documentos financeiros brasileiros.
+Analise este documento. Pode ser: cupom fiscal, NF-e, DANFE, comprovante PIX, TED, DOC, recibo, boleto ou extrato.
 
-Analise a imagem e extraia as informações a seguir. Responda APENAS com JSON válido, sem explicações, sem markdown.
+REGRAS:
+- Comprovante PIX/TED: fornecedor = nome do RECEBEDOR (nunca do pagador)
+- Cupom/NF-e: fornecedor = nome do estabelecimento
+- Valor = valor principal da transação (ignorar taxas)
+- Data = data da transação ou emissão
+- CNPJ = do recebedor/fornecedor quando disponível
 
-Formato obrigatório:
-{
-  "valor": <número decimal, ex: 1250.00>,
-  "data": "<YYYY-MM-DD>",
-  "fornecedor": "<nome da empresa/loja>",
-  "cnpj": "<CNPJ formatado ou null>",
-  "forma_pagamento": "<PIX|Cartão de crédito|Boleto|Dinheiro|Transferência|null>",
-  "descricao": "<breve descrição dos itens principais, máx 80 chars>",
-  "confianca": {
-    "valor": <0-100>,
-    "fornecedor": <0-100>,
-    "geral": <0-100>
-  }
-}
+Responda APENAS com JSON puro, sem markdown, sem blocos de codigo, sem explicacoes.
 
-Se não conseguir identificar um campo, use null. Nunca invente dados.`;
+{"valor":<numero decimal>,"data":"<YYYY-MM-DD>","fornecedor":"<nome recebedor ou loja>","cnpj":"<cnpj ou null>","forma_pagamento":"<PIX|Cartao de credito|Boleto|Dinheiro|Transferencia|null>","descricao":"<resumo max 80 chars>","confianca":{"valor":<0-100>,"fornecedor":<0-100>,"geral":<0-100>}}
+
+Se nao identificar um campo use null. Nunca invente dados.`;
 
   try{
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
@@ -684,7 +758,9 @@ Se não conseguir identificar um campo, use null. Nunca invente dados.`;
         messages:[{
           role:'user',
           content:[
-            {type:'image',source:{type:'base64',media_type:fotoMime,data:fotoBase64}},
+            fotoMime==='application/pdf'
+              ? {type:'document',source:{type:'base64',media_type:'application/pdf',data:fotoBase64}}
+              : {type:'image',source:{type:'base64',media_type:fotoMime,data:fotoBase64}},
             {type:'text',text:prompt}
           ]
         }]
@@ -747,15 +823,18 @@ function preencherCampos(ocr){
 
 // ── RETRY / TROCA FOTO ──
 function triggerNovaFoto(){
-  // reseta tudo e abre seletor de arquivo
   fotoBase64=null; uploadedFile=null;
   document.getElementById('ocr-fail').style.display='none';
   document.getElementById('ocr-result').style.display='none';
+  document.getElementById('ocr-loading').style.display='none';
+  // Tenta pelo file-retry primeiro, senão pelo upload-zone
+  const retry=document.getElementById('file-retry');
+  if(retry){ retry.value=''; retry.click(); return; }
+  const fi=document.getElementById('file-input');
+  if(fi){ fi.value=''; fi.click(); return; }
+  // fallback: mostra upload zone
   document.getElementById('preview-wrap').style.display='none';
-  document.getElementById('upload-zone').style.display='none';
-  // usa input oculto dedicado para retry
-  document.getElementById('file-retry').value='';
-  document.getElementById('file-retry').click();
+  document.getElementById('upload-zone').style.display='block';
 }
 
 function preencherManual(){
