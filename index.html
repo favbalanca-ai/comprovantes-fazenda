@@ -1145,24 +1145,29 @@ async function salvar(){
   btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>Salvando...';
   btn.disabled=true;
 
+  // Limitar tamanho dos campos texto para JSONP
+  var obsVal=(document.getElementById('f-obs').value||'').substring(0,100);
+  var fornVal=(document.getElementById('f-fornecedor').value||'').substring(0,80);
+  var cnpjVal=(document.getElementById('f-cnpj').value||'').substring(0,20);
+  var contaVal=(contaAtual.label||'').substring(0,50);
+  var destVal=dest.substring(0,80);
+  var grupoVal=grupo.substring(0,30);
+
   const payload={
     acao:'salvar',
     usuario_id:  usuario.id,
     fazenda:     usuario.fazenda,
-    fornecedor:  document.getElementById('f-fornecedor').value||'',
-    cnpj:        document.getElementById('f-cnpj').value||'',
+    fornecedor:  fornVal,
+    cnpj:        cnpjVal,
     valor:       val,
     forma_pgto:  document.getElementById('f-pgto').value||'',
-    conta:       contaAtual.label,
-    destino:     dest,
-    grupo:       grupo,
-    observacao:  document.getElementById('f-obs').value||'',
+    conta:       contaVal,
+    destino:     destVal,
+    grupo:       grupoVal,
+    observacao:  obsVal,
     lido_ia:     !!fotoBase64,
-    confianca_ia:parseInt(document.getElementById('conf-badge').textContent.match(/\d+/)?.[0])||null,
+    confianca_ia:null,
     data_compra: document.getElementById('f-data').value||new Date().toISOString().split('T')[0],
-    foto_base64: fotoBase64||null,
-    foto_mime:   fotoMime||null,
-    foto_nome:   uploadedFile?.name||null,
   };
 
   let urlDrive='';
