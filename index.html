@@ -437,26 +437,31 @@ let usuario=null,contaAtual=null,mostContas=false,userSel=null;
 let fotoBase64=null,fotoMime=null,uploadedFile=null;
 let lancamentos=[];
 
-// ── API GAS (JSONP — compativel com GAS sem CORS) ──────
-// fetch() direto e bloqueado pelo Google (CORS+redirect).
-// JSONP via <script> e a unica forma que funciona do browser.
+// ── API GAS (JSONP) ─────────────────────────────────────
 function gasPost(body){
   return new Promise(function(resolve,reject){
     var cbName='_gcb'+Date.now();
     var payload=encodeURIComponent(JSON.stringify(body));
     var url=GAS_URL+'?payload='+payload+'&callback='+cbName;
+
+    // Verificar tamanho da URL
+    if(url.length>100000){
+      reject(new Error('Payload muito grande: '+Math.round(url.length/1024)+'KB'));
+      return;
+    }
+
     var tag=document.createElement('script');
     var timer=setTimeout(function(){
       cleanup();
-      reject(new Error('Timeout GAS 15s'));
-    },15000);
-    window[cbName]=function(data){ cleanup(); resolve(data); };
+      reject(new Error('Timeout GAS 30s'));
+    },30000);
+    window[cbName]=function(data){cleanup();resolve(data);};
     function cleanup(){
       clearTimeout(timer);
       delete window[cbName];
       if(tag.parentNode) tag.parentNode.removeChild(tag);
     }
-    tag.onerror=function(){ cleanup(); reject(new Error('Erro rede GAS')); };
+    tag.onerror=function(){cleanup();reject(new Error('Erro rede GAS — verifique o deploy'));};
     tag.src=url;
     document.head.appendChild(tag);
   });
@@ -721,61 +726,79 @@ async function rodarOCR(){
   document.getElementById('ocr-fail').style.display='none';
 
   const steps=['step-1','step-2','step-3','step-4'];
-  steps.forEach(s=>{const el=document.getElementById(s);el.classList.remove('done','active');});
-  let si=0;
-  const stepTimer=setInterval(()=>{
-    if(si>0){ try{document.getElementById(steps[si-1]).classList.replace('active','done');}catch(e){} }
+  steps.forEach(function(s){var el=document.getElementById(s);el.classList.remove('done','active');});
+  var si=0;
+  var stepTimer=setInterval(function(){
+    if(si>0){try{document.getElementById(steps[si-1]).classList.replace('active','done');}catch(e){}}
     if(si<steps.length){document.getElementById(steps[si]).classList.add('active');si++;}
   },700);
 
   try{
-    // Se PDF: converter para imagem via pdf.js antes de enviar
-    let b64=fotoBase64, mime=fotoMime;
-    if(mime==='application/pdf'){
-      try{
-        if(!window.pdfjsLib){
-          await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
-          pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        }
-        const raw=atob(b64), bytes=new Uint8Array(raw.length);
-        for(let i=0;i<raw.length;i++) bytes[i]=raw.charCodeAt(i);
-        const pdf=await pdfjsLib.getDocument({data:bytes}).promise;
-        const page=await pdf.getPage(1);
-        const vp=page.getViewport({scale:2.5});
-        const canvas=document.createElement('canvas');
-        canvas.width=vp.width; canvas.height=vp.height;
-        await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
-        const dataUrl=canvas.toDataURL('image/jpeg',0.92);
-        b64=dataUrl.split(',')[1];
-        mime='image/jpeg';
-        // mostrar preview da página renderizada
-        const img=document.getElementById('img-preview');
-        if(img){img.src=dataUrl;img.style.display='block';}
-      }catch(pdfErr){
-        console.warn('pdf.js falhou:', pdfErr);
-        // mantém PDF original como fallback
+    var payload;
+
+    if(fotoMime==='application/pdf'){
+      // PDF: extrair texto via pdf.js (leve) e enviar texto para o GAS
+      _setStep(1);
+      if(!window.pdfjsLib){
+        await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+        pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
       }
+      var raw=atob(fotoBase64), bytes=new Uint8Array(raw.length);
+      for(var i=0;i<raw.length;i++) bytes[i]=raw.charCodeAt(i);
+      var pdf=await pdfjsLib.getDocument({data:bytes}).promise;
+      _setStep(2);
+
+      // Extrair texto de todas as páginas
+      var textoTotal='';
+      for(var p=1;p<=Math.min(pdf.numPages,3);p++){
+        var page=await pdf.getPage(p);
+        var tc=await page.getTextContent();
+        var linhas=tc.items.map(function(i){return i.str;}).join(' ');
+        textoTotal+=linhas+'
+';
+      }
+      _setStep(3);
+
+      // Enviar texto via JSONP (pequeno, sem problema de tamanho)
+      payload={acao:'ocr_texto',texto:textoTotal.substring(0,3000)};
+
+    } else {
+      // Imagem: reduzir para max 800px e comprimir antes de enviar
+      _setStep(1);
+      var img=new Image();
+      await new Promise(function(res,rej){
+        img.onload=res; img.onerror=rej;
+        img.src='data:'+fotoMime+';base64,'+fotoBase64;
+      });
+      _setStep(2);
+      var canvas=document.createElement('canvas');
+      var maxW=800, scale=Math.min(1,maxW/img.width);
+      canvas.width=img.width*scale; canvas.height=img.height*scale;
+      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+      var dataUrl=canvas.toDataURL('image/jpeg',0.75);
+      var b64small=dataUrl.split(',')[1];
+      _setStep(3);
+
+      // Verificar tamanho (JSONP suporta ~100KB de URL)
+      if(b64small.length>80000){
+        // Ainda grande: comprimir mais
+        canvas.width=img.width*scale*0.6; canvas.height=img.height*scale*0.6;
+        canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+        dataUrl=canvas.toDataURL('image/jpeg',0.6);
+        b64small=dataUrl.split(',')[1];
+      }
+      payload={acao:'ocr',base64:b64small,mime:'image/jpeg'};
     }
 
-    // Chamar OCR via GAS (proxy — evita CORS com API Anthropic)
-    // Se não tiver GAS configurado, tenta direto (só funciona localhost)
-    let ocr;
-    if(!MODO_DEMO){
-      const res=await gasPost({acao:'ocr',base64:b64,mime:mime});
-      if(!res.ok) throw new Error(res.erro||'Erro OCR no servidor');
-      ocr=res.ocr;
-    } else {
-      // Modo demo: simula resposta OCR para teste visual
-      ocr={valor:65500,data:'2026-06-02',fornecedor:'TRR FAST DIESEL',cnpj:'**.***8.508/0001-**',
-           forma_pagamento:'PIX',descricao:'Comprovante PIX SICOOB',
-           confianca:{valor:98,fornecedor:98,geral:98}};
-    }
+    // Enviar via JSONP (funciona para texto e imagens pequenas)
+    var res=await gasPost(payload);
+    if(!res.ok) throw new Error(res.erro||'Erro OCR servidor');
 
     clearInterval(stepTimer);
-    steps.forEach(s=>document.getElementById(s).classList.add('done'));
-    setTimeout(()=>{
+    steps.forEach(function(s){document.getElementById(s).classList.add('done');});
+    setTimeout(function(){
       document.getElementById('ocr-loading').style.display='none';
-      preencherCampos(ocr);
+      preencherCampos(res.ocr);
     },400);
 
   }catch(err){
@@ -783,11 +806,12 @@ async function rodarOCR(){
     console.error('OCR erro:', err);
     document.getElementById('ocr-loading').style.display='none';
     document.getElementById('ocr-fail').style.display='block';
-    const sub=document.querySelector('.ocr-fail-sub');
+    var sub=document.querySelector('.ocr-fail-sub');
     if(sub) sub.innerHTML='Erro: <code style="font-size:11px">'+err.message+'</code><br>Tente nova foto ou preencha manualmente.';
     showToast('Erro OCR: '+err.message,'red');
   }
 }
+
 function preencherCampos(ocr){
   const mark=(id)=>{
     const el=document.getElementById(id);
