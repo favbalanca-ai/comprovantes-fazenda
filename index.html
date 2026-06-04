@@ -749,30 +749,69 @@ Responda APENAS com JSON puro, sem markdown, sem blocos de codigo, sem explicaco
 Se nao identificar um campo use null. Nunca invente dados.`;
 
   try{
+    const isPDF = fotoMime==='application/pdf';
+
+    // PDF: converte primeira página para imagem via canvas antes de enviar
+    // (mais compatível com todos os modelos)
+    let b64Final = fotoBase64;
+    let mimeFinale = fotoMime;
+
+    if(isPDF){
+      try{
+        if(!window.pdfjsLib){
+          await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+          pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+        const raw=atob(fotoBase64);
+        const bytes=new Uint8Array(raw.length);
+        for(let i=0;i<raw.length;i++) bytes[i]=raw.charCodeAt(i);
+        const pdf=await pdfjsLib.getDocument({data:bytes}).promise;
+        const page=await pdf.getPage(1);
+        const vp=page.getViewport({scale:2.5});
+        const canvas=document.createElement('canvas');
+        canvas.width=vp.width; canvas.height=vp.height;
+        await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+        const dataUrl=canvas.toDataURL('image/jpeg',0.92);
+        b64Final=dataUrl.split(',')[1];
+        mimeFinale='image/jpeg';
+        // Atualizar preview com imagem renderizada
+        const img=document.getElementById('img-preview');
+        if(img){ img.src=dataUrl; img.style.display='block'; }
+      }catch(pdfErr){
+        console.warn('pdf.js falhou, tentando enviar PDF direto:', pdfErr);
+        // fallback: envia PDF como document (funciona no claude-sonnet-4-5+)
+        mimeFinale='application/pdf';
+      }
+    }
+
+    const contentBlock = mimeFinale==='application/pdf'
+      ? {type:'document',source:{type:'base64',media_type:'application/pdf',data:b64Final}}
+      : {type:'image',source:{type:'base64',media_type:mimeFinale,data:b64Final}};
+
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514',
         max_tokens:1000,
-        messages:[{
-          role:'user',
-          content:[
-            fotoMime==='application/pdf'
-              ? {type:'document',source:{type:'base64',media_type:'application/pdf',data:fotoBase64}}
-              : {type:'image',source:{type:'base64',media_type:fotoMime,data:fotoBase64}},
-            {type:'text',text:prompt}
-          ]
-        }]
+        messages:[{role:'user',content:[contentBlock,{type:'text',text:prompt}]}]
       })
     });
     const data=await resp.json();
     clearInterval(stepTimer);
     steps.forEach(s=>document.getElementById(s).classList.add('done'));
 
+    // Verificar erro da API
+    if(data.error){
+      console.error('API error:', data.error);
+      throw new Error(data.error.message||'Erro API');
+    }
+
     let txt=data.content?.find(b=>b.type==='text')?.text||'{}';
     txt=txt.replace(/```json|```/g,'').trim();
-    const ocr=JSON.parse(txt);
+    // Extrair JSON se vier com texto ao redor
+    const jsonMatch=txt.match(/\{[\s\S]*\}/);
+    const ocr=JSON.parse(jsonMatch?jsonMatch[0]:txt);
 
     setTimeout(()=>{
       document.getElementById('ocr-loading').style.display='none';
@@ -781,9 +820,13 @@ Se nao identificar um campo use null. Nunca invente dados.`;
 
   } catch(err){
     clearInterval(stepTimer);
+    console.error('OCR erro completo:', err);
     document.getElementById('ocr-loading').style.display='none';
     document.getElementById('ocr-fail').style.display='block';
-    showToast('Não foi possível ler o comprovante','red');
+    // Mostrar erro real no botão para debug
+    const sub=document.querySelector('.ocr-fail-sub');
+    if(sub) sub.innerHTML='Erro: <code style="font-size:11px">'+err.message+'</code><br>Tente nova foto ou preencha manualmente.';
+    showToast('Erro: '+err.message,'red');
   }
 }
 
