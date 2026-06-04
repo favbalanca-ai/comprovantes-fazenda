@@ -784,37 +784,42 @@ async function rodarOCR(){
         var page1=await pdf.getPage(1);
         _setStep(3);
 
-        // Escala moderada para manter tamanho pequeno
-        var scale=1.5;
+        // Renderizar em baixa resolução para caber no JSONP (limite ~6KB base64)
+        // GAS aceita URLs de até ~8000 chars, base64 encoded = ~3x maior
+        var scale=1.0;
         var vp=page1.getViewport({scale:scale});
         var canvas=document.createElement('canvas');
+
+        // Limitar largura máxima a 400px
+        var maxW=400;
+        if(vp.width>maxW){ scale=maxW/vp.width; vp=page1.getViewport({scale:scale}); }
         canvas.width=vp.width;
         canvas.height=vp.height;
         await page1.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
 
-        // Comprimir bastante para caber no JSONP (~80KB max)
-        var quality=0.5;
+        // Comprimir agressivamente — alvo: base64 < 5000 chars
+        var quality=0.3;
         var dataUrl=canvas.toDataURL('image/jpeg',quality);
         b64final=dataUrl.split(',')[1];
 
-        // Se ainda grande, reduzir mais
-        while(b64final.length > 70000 && quality > 0.2){
-          quality-=0.1;
+        // Reduzir mais se necessário
+        while(b64final.length > 5000 && quality > 0.1){
+          quality=Math.max(0.1,quality-0.05);
           dataUrl=canvas.toDataURL('image/jpeg',quality);
           b64final=dataUrl.split(',')[1];
         }
 
-        // Se ainda grande, reduzir resolução
-        if(b64final.length > 70000){
+        // Se ainda grande, cortar resolução pela metade
+        if(b64final.length > 5000){
           var c2=document.createElement('canvas');
-          c2.width=Math.floor(vp.width*0.6);
-          c2.height=Math.floor(vp.height*0.6);
+          c2.width=Math.floor(canvas.width*0.5);
+          c2.height=Math.floor(canvas.height*0.5);
           c2.getContext('2d').drawImage(canvas,0,0,c2.width,c2.height);
-          dataUrl=c2.toDataURL('image/jpeg',0.5);
+          dataUrl=c2.toDataURL('image/jpeg',0.2);
           b64final=dataUrl.split(',')[1];
         }
 
-        console.log('Imagem gerada: '+Math.round(b64final.length/1024)+'KB');
+        console.log('Imagem gerada: '+Math.round(b64final.length/1024)+'KB | chars: '+b64final.length);
 
         // Mostrar preview
         document.getElementById('img-preview').src=dataUrl;
@@ -831,22 +836,29 @@ async function rodarOCR(){
         imgEl.src='data:'+fotoMime+';base64,'+fotoBase64;});
       _setStep(2);
 
-      var maxW=700;
+      // Reduzir para caber no JSONP — alvo < 5000 chars base64
+      var maxW=350;
       var sc=Math.min(1, maxW/imgEl.width);
       var cv=document.createElement('canvas');
-      cv.width=imgEl.width*sc; cv.height=imgEl.height*sc;
+      cv.width=Math.floor(imgEl.width*sc);
+      cv.height=Math.floor(imgEl.height*sc);
       cv.getContext('2d').drawImage(imgEl,0,0,cv.width,cv.height);
-      var du=cv.toDataURL('image/jpeg',0.6);
+      var quality=0.3;
+      var du=cv.toDataURL('image/jpeg',quality);
       b64final=du.split(',')[1];
 
-      // Reduzir mais se necessário
-      if(b64final.length>70000){
-        cv.width=cv.width*0.7; cv.height=cv.height*0.7;
-        cv.getContext('2d').drawImage(imgEl,0,0,cv.width,cv.height);
-        du=cv.toDataURL('image/jpeg',0.5);
+      while(b64final.length>5000 && quality>0.1){
+        quality=Math.max(0.1,quality-0.05);
+        du=cv.toDataURL('image/jpeg',quality);
         b64final=du.split(',')[1];
       }
-      console.log('Imagem: '+Math.round(b64final.length/1024)+'KB');
+      if(b64final.length>5000){
+        cv.width=Math.floor(cv.width*0.5); cv.height=Math.floor(cv.height*0.5);
+        cv.getContext('2d').drawImage(imgEl,0,0,cv.width,cv.height);
+        du=cv.toDataURL('image/jpeg',0.2);
+        b64final=du.split(',')[1];
+      }
+      console.log('Imagem: '+Math.round(b64final.length/1024)+'KB | chars: '+b64final.length);
       _setStep(3);
       payload={acao:'ocr', base64:b64final, mime:'image/jpeg'};
     }
