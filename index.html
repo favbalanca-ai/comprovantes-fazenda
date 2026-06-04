@@ -437,34 +437,70 @@ let usuario=null,contaAtual=null,mostContas=false,userSel=null;
 let fotoBase64=null,fotoMime=null,uploadedFile=null;
 let lancamentos=[];
 
-// ── API GAS (JSONP) ─────────────────────────────────────
+// ── API GAS ─────────────────────────────────────────────
+// JSONP para chamadas leves (login, listar, salvar)
+// fetch POST para OCR (base64 de imagem)
 function gasPost(body){
+  if(body.acao==='ocr'||body.acao==='ocr_texto'){
+    return gasPostFetch(body);
+  }
+  return gasPostJSONP(body);
+}
+
+function gasPostJSONP(body){
   return new Promise(function(resolve,reject){
     var cbName='_gcb'+Date.now();
     var payload=encodeURIComponent(JSON.stringify(body));
     var url=GAS_URL+'?payload='+payload+'&callback='+cbName;
-
-    // Verificar tamanho da URL
-    if(url.length>100000){
-      reject(new Error('Payload muito grande: '+Math.round(url.length/1024)+'KB'));
-      return;
-    }
-
     var tag=document.createElement('script');
-    var timer=setTimeout(function(){
-      cleanup();
-      reject(new Error('Timeout GAS 30s'));
-    },30000);
+    var timer=setTimeout(function(){cleanup();reject(new Error('Timeout GAS 30s'));},30000);
     window[cbName]=function(data){cleanup();resolve(data);};
-    function cleanup(){
-      clearTimeout(timer);
-      delete window[cbName];
-      if(tag.parentNode) tag.parentNode.removeChild(tag);
-    }
-    tag.onerror=function(){cleanup();reject(new Error('Erro rede GAS — verifique o deploy'));};
+    function cleanup(){clearTimeout(timer);delete window[cbName];if(tag.parentNode)tag.parentNode.removeChild(tag);}
+    tag.onerror=function(){cleanup();reject(new Error('Erro rede GAS'));};
     tag.src=url;
     document.head.appendChild(tag);
   });
+}
+
+// POST direto — GAS com "Executar como: Eu" + "Acesso: Qualquer pessoa" permite isso
+async function gasPostFetch(body){
+  // Tentativa 1: fetch POST direto (funciona se GAS tiver CORS headers)
+  try{
+    var resp=await fetch(GAS_URL,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain'}, // text/plain evita preflight CORS
+      body:JSON.stringify(body),
+      redirect:'follow'
+    });
+    var txt=await resp.text();
+    // GAS pode redirecionar — pegar o JSON da resposta final
+    var json=JSON.parse(txt.replace(/^[^{]*/,'').replace(/[^}]*$/,''));
+    return json;
+  }catch(e){
+    console.warn('fetch POST falhou:',e.message);
+  }
+
+  // Tentativa 2: GET com base64 particionado em parâmetros menores
+  // Dividir base64 em chunks de 1000 chars e reconstruir no GAS
+  var b=body.base64||'';
+  var chunkSize=1000;
+  var chunks=[];
+  for(var i=0;i<b.length;i+=chunkSize) chunks.push(b.substring(i,i+chunkSize));
+
+  // Enviar metadados primeiro via JSONP
+  var meta=Object.assign({},body);
+  delete meta.base64;
+  meta.chunks_total=chunks.length;
+  meta.session=Date.now().toString();
+
+  // Para sessões pequenas (<=3 chunks = 3KB), enviar tudo junto
+  if(chunks.length<=3){
+    meta.base64=b;
+    return gasPostJSONP(meta);
+  }
+
+  // Para imagens maiores: reduzir ainda mais no caller
+  throw new Error('Imagem muito grande mesmo após compressão ('+Math.round(b.length/1024)+'KB). Tente foto menor.');
 }
 
 // ── LOGIN ──
