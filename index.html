@@ -1055,16 +1055,54 @@ async function salvar(){
   let urlDrive='';
   if(!MODO_DEMO){
     try{
-      showToast('Enviando ao Drive...','');
-      const res=await gasPost(payload);
+      showToast('Salvando...','');
+
+      // Salvar sem foto primeiro (via JSONP — rápido e confiável)
+      const payloadSemFoto=Object.assign({},payload);
+      delete payloadSemFoto.foto_base64;
+      delete payloadSemFoto.foto_mime;
+      delete payloadSemFoto.foto_nome;
+
+      console.log('Salvando lançamento no Sheets...');
+      const res=await gasPostJSONP(payloadSemFoto);
+      console.log('Resposta salvar:', JSON.stringify(res));
+
       if(res.ok){
-        urlDrive=res.url_comprovante||'';
-        showToast('Salvo no Sheets e Drive ✓','green');
+        showToast('Lançamento salvo no Sheets ✓','green');
+
+        // Se tem foto, enviar separadamente via fetch POST
+        if(fotoBase64){
+          try{
+            showToast('Enviando foto ao Drive...','');
+            const payloadFoto={
+              acao:'salvar_foto',
+              id: res.id,
+              foto_base64: fotoBase64,
+              foto_mime: fotoMime||'image/jpeg',
+              foto_nome: uploadedFile?.name||'comprovante.jpg',
+              usuario_id: usuario.id,
+              grupo: grupo,
+              data_compra: payload.data_compra,
+            };
+            const resFoto=await gasPostFetch(payloadFoto);
+            console.log('Resposta foto:', JSON.stringify(resFoto));
+            if(resFoto.ok){
+              urlDrive=resFoto.url_comprovante||'';
+              showToast('Foto salva no Drive ✓','green');
+            } else {
+              showToast('Sheets OK · Drive: '+(resFoto.erro||'erro'),'red');
+            }
+          }catch(eFoto){
+            console.warn('Erro ao enviar foto:', eFoto.message);
+            showToast('Sheets OK · Foto pendente','');
+          }
+        }
       } else {
-        showToast('Erro GAS: '+(res.erro||'desconhecido'),'red');
+        showToast('Erro ao salvar: '+(res.erro||'desconhecido'),'red');
       }
     }catch(e){
-      showToast('Erro de conexão — salvo localmente','red');
+      console.error('Erro salvar:', e);
+      showToast('Erro de conexão: '+e.message,'red');
     }
   } else {
     showToast('Modo demo — não enviado ao Drive','');
