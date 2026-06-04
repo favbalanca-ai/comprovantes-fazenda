@@ -759,8 +759,7 @@ async function rodarOCR(){
         var page=await pdf.getPage(p);
         var tc=await page.getTextContent();
         var linhas=tc.items.map(function(i){return i.str;}).join(' ');
-        textoTotal+=linhas+'
-';
+        textoTotal+=(linhas+String.fromCharCode(10));
       }
       _setStep(3);
 
