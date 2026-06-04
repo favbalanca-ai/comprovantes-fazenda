@@ -516,23 +516,32 @@ async function fazerLogin(){
   try{
     let u=null;
 
+    // Tentar login via GAS; se falhar usa validação local
+    let gasOk=false;
     if(!MODO_DEMO){
-      // Login via GAS (valida no servidor)
-      const res=await gasPost({acao:'login',usuario_id:userSel,senha});
-      if(!res.ok){
-        err.textContent='Usuário ou senha incorretos';err.style.display='block';
-        _resetBtn(btn);return;
+      try{
+        const res=await gasPost({acao:'login',usuario_id:userSel,senha});
+        if(res.ok){
+          const ud=res.usuario;
+          u={
+            id:ud.id, nome:ud.nome, sigla:ud.sigla, fazenda:ud.fazenda,
+            contas:[{label:(ud.banco||'Banco')+' — CC',banco:ud.banco||'',
+                     agencia:ud.agencia||'',conta:ud.conta||'',pix:ud.pix||''}]
+          };
+          gasOk=true;
+        } else {
+          // GAS respondeu mas credenciais erradas — tentar local
+          console.warn('GAS login falhou, tentando local:', res.erro);
+        }
+      }catch(gasErr){
+        console.warn('GAS inacessível, usando login local:', gasErr.message);
       }
-      // Montar objeto usuario com contas do GAS
-      const ud=res.usuario;
-      u={
-        id:ud.id, nome:ud.nome, sigla:ud.sigla, fazenda:ud.fazenda,
-        contas:[{label:ud.banco+' — CC',banco:ud.banco,agencia:ud.agencia,conta:ud.conta,pix:ud.pix}]
-      };
-    } else {
-      // Modo demo — valida localmente
+    }
+
+    // Fallback: validação local (sempre funciona)
+    if(!gasOk){
       const local=USUARIOS.find(x=>x.id===userSel);
-      if(!local||local.senha!==senha){
+      if(!local||String(local.senha)!==String(senha)){
         err.textContent='Usuário ou senha incorretos';err.style.display='block';
         _resetBtn(btn);return;
       }
