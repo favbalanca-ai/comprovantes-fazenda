@@ -730,8 +730,8 @@ async function rodarOCR(){
   document.getElementById('ocr-result').style.display='none';
   document.getElementById('ocr-fail').style.display='none';
 
-  const steps=['step-1','step-2','step-3','step-4'];
-  steps.forEach(function(s){var el=document.getElementById(s);el.classList.remove('done','active');});
+  var steps=['step-1','step-2','step-3','step-4'];
+  steps.forEach(function(s){document.getElementById(s).classList.remove('done','active');});
   var si=0;
   var stepTimer=setInterval(function(){
     if(si>0){try{document.getElementById(steps[si-1]).classList.replace('active','done');}catch(e){}}
@@ -739,10 +739,10 @@ async function rodarOCR(){
   },700);
 
   try{
-    var payload;
+    var b64final=fotoBase64, mimeFinal='image/jpeg', payload;
 
     if(fotoMime==='application/pdf'){
-      // PDF: extrair texto via pdf.js (leve) e enviar texto para o GAS
+      // 1. Tentar extrair texto via pdf.js
       _setStep(1);
       if(!window.pdfjsLib){
         await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
@@ -753,57 +753,96 @@ async function rodarOCR(){
       var pdf=await pdfjsLib.getDocument({data:bytes}).promise;
       _setStep(2);
 
-      // Extrair texto de todas as páginas
+      // Extrair texto
       var textoTotal='';
       for(var p=1;p<=Math.min(pdf.numPages,3);p++){
-        var page=await pdf.getPage(p);
-        var tc=await page.getTextContent();
-        var linhas=tc.items.map(function(i){return i.str;}).join(' ');
-        textoTotal+=(linhas+String.fromCharCode(10));
-      }
-      _setStep(3);
-
-      // LOG debug — ver o que foi extraído do PDF
-      console.log('=== TEXTO EXTRAIDO DO PDF ===');
-      console.log('Tamanho:', textoTotal.length, 'chars');
-      console.log('Conteudo:', textoTotal.substring(0, 300));
-
-      if(textoTotal.trim().length < 10){
-        throw new Error('PDF sem texto extraível — tente enviar como imagem (JPG/PNG)');
+        var pg=await pdf.getPage(p);
+        var tc=await pg.getTextContent();
+        textoTotal+=tc.items.map(function(it){return it.str;}).join(' ')+' ';
       }
 
-      // Enviar texto via JSONP (pequeno, sem problema de tamanho)
-      payload={acao:'ocr_texto',texto:textoTotal.substring(0,3000)};
+      var textoLimpo=textoTotal.trim();
+      console.log('Texto extraído: '+textoLimpo.length+' chars | Preview: '+textoLimpo.substring(0,100));
+
+      if(textoLimpo.length > 20){
+        // PDF tem texto — enviar texto via JSONP
+        _setStep(3);
+        payload={acao:'ocr_texto', texto:textoLimpo.substring(0,3000)};
+
+      } else {
+        // PDF é imagem — renderizar primeira página em canvas
+        console.log('PDF sem texto, renderizando como imagem...');
+        var page1=await pdf.getPage(1);
+        _setStep(3);
+
+        // Escala moderada para manter tamanho pequeno
+        var scale=1.5;
+        var vp=page1.getViewport({scale:scale});
+        var canvas=document.createElement('canvas');
+        canvas.width=vp.width;
+        canvas.height=vp.height;
+        await page1.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+
+        // Comprimir bastante para caber no JSONP (~80KB max)
+        var quality=0.5;
+        var dataUrl=canvas.toDataURL('image/jpeg',quality);
+        b64final=dataUrl.split(',')[1];
+
+        // Se ainda grande, reduzir mais
+        while(b64final.length > 70000 && quality > 0.2){
+          quality-=0.1;
+          dataUrl=canvas.toDataURL('image/jpeg',quality);
+          b64final=dataUrl.split(',')[1];
+        }
+
+        // Se ainda grande, reduzir resolução
+        if(b64final.length > 70000){
+          var c2=document.createElement('canvas');
+          c2.width=Math.floor(vp.width*0.6);
+          c2.height=Math.floor(vp.height*0.6);
+          c2.getContext('2d').drawImage(canvas,0,0,c2.width,c2.height);
+          dataUrl=c2.toDataURL('image/jpeg',0.5);
+          b64final=dataUrl.split(',')[1];
+        }
+
+        console.log('Imagem gerada: '+Math.round(b64final.length/1024)+'KB');
+
+        // Mostrar preview
+        document.getElementById('img-preview').src=dataUrl;
+        document.getElementById('img-preview').style.display='block';
+
+        payload={acao:'ocr', base64:b64final, mime:'image/jpeg'};
+      }
 
     } else {
-      // Imagem: reduzir para max 800px e comprimir antes de enviar
+      // Imagem normal — reduzir e comprimir
       _setStep(1);
-      var img=new Image();
-      await new Promise(function(res,rej){
-        img.onload=res; img.onerror=rej;
-        img.src='data:'+fotoMime+';base64,'+fotoBase64;
-      });
+      var imgEl=new Image();
+      await new Promise(function(res,rej){imgEl.onload=res;imgEl.onerror=rej;
+        imgEl.src='data:'+fotoMime+';base64,'+fotoBase64;});
       _setStep(2);
-      var canvas=document.createElement('canvas');
-      var maxW=800, scale=Math.min(1,maxW/img.width);
-      canvas.width=img.width*scale; canvas.height=img.height*scale;
-      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-      var dataUrl=canvas.toDataURL('image/jpeg',0.75);
-      var b64small=dataUrl.split(',')[1];
-      _setStep(3);
 
-      // Verificar tamanho (JSONP suporta ~100KB de URL)
-      if(b64small.length>80000){
-        // Ainda grande: comprimir mais
-        canvas.width=img.width*scale*0.6; canvas.height=img.height*scale*0.6;
-        canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-        dataUrl=canvas.toDataURL('image/jpeg',0.6);
-        b64small=dataUrl.split(',')[1];
+      var maxW=700;
+      var sc=Math.min(1, maxW/imgEl.width);
+      var cv=document.createElement('canvas');
+      cv.width=imgEl.width*sc; cv.height=imgEl.height*sc;
+      cv.getContext('2d').drawImage(imgEl,0,0,cv.width,cv.height);
+      var du=cv.toDataURL('image/jpeg',0.6);
+      b64final=du.split(',')[1];
+
+      // Reduzir mais se necessário
+      if(b64final.length>70000){
+        cv.width=cv.width*0.7; cv.height=cv.height*0.7;
+        cv.getContext('2d').drawImage(imgEl,0,0,cv.width,cv.height);
+        du=cv.toDataURL('image/jpeg',0.5);
+        b64final=du.split(',')[1];
       }
-      payload={acao:'ocr',base64:b64small,mime:'image/jpeg'};
+      console.log('Imagem: '+Math.round(b64final.length/1024)+'KB');
+      _setStep(3);
+      payload={acao:'ocr', base64:b64final, mime:'image/jpeg'};
     }
 
-    // Enviar via JSONP (funciona para texto e imagens pequenas)
+    // Enviar via JSONP
     var res=await gasPost(payload);
     if(!res.ok) throw new Error(res.erro||'Erro OCR servidor');
 
