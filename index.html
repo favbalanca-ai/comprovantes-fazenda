@@ -763,6 +763,15 @@ async function rodarOCR(){
       }
       _setStep(3);
 
+      // LOG debug — ver o que foi extraído do PDF
+      console.log('=== TEXTO EXTRAIDO DO PDF ===');
+      console.log('Tamanho:', textoTotal.length, 'chars');
+      console.log('Conteudo:', textoTotal.substring(0, 300));
+
+      if(textoTotal.trim().length < 10){
+        throw new Error('PDF sem texto extraível — tente enviar como imagem (JPG/PNG)');
+      }
+
       // Enviar texto via JSONP (pequeno, sem problema de tamanho)
       payload={acao:'ocr_texto',texto:textoTotal.substring(0,3000)};
 
