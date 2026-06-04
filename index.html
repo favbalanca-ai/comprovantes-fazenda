@@ -720,50 +720,24 @@ async function rodarOCR(){
   document.getElementById('ocr-result').style.display='none';
   document.getElementById('ocr-fail').style.display='none';
 
-  // anima steps (só se ainda não animando pelo PDF)
   const steps=['step-1','step-2','step-3','step-4'];
-  const jaAnimando=document.getElementById('step-3').classList.contains('active');
-  if(!jaAnimando){
-    steps.forEach(s=>{const el=document.getElementById(s);el.classList.remove('done','active');});
-  }
+  steps.forEach(s=>{const el=document.getElementById(s);el.classList.remove('done','active');});
   let si=0;
   const stepTimer=setInterval(()=>{
     if(si>0){ try{document.getElementById(steps[si-1]).classList.replace('active','done');}catch(e){} }
     if(si<steps.length){document.getElementById(steps[si]).classList.add('active');si++;}
-  },600);
-
-  const prompt=`Você é um sistema de OCR especializado em documentos financeiros brasileiros.
-Analise este documento. Pode ser: cupom fiscal, NF-e, DANFE, comprovante PIX, TED, DOC, recibo, boleto ou extrato.
-
-REGRAS:
-- Comprovante PIX/TED: fornecedor = nome do RECEBEDOR (nunca do pagador)
-- Cupom/NF-e: fornecedor = nome do estabelecimento
-- Valor = valor principal da transação (ignorar taxas)
-- Data = data da transação ou emissão
-- CNPJ = do recebedor/fornecedor quando disponível
-
-Responda APENAS com JSON puro, sem markdown, sem blocos de codigo, sem explicacoes.
-
-{"valor":<numero decimal>,"data":"<YYYY-MM-DD>","fornecedor":"<nome recebedor ou loja>","cnpj":"<cnpj ou null>","forma_pagamento":"<PIX|Cartao de credito|Boleto|Dinheiro|Transferencia|null>","descricao":"<resumo max 80 chars>","confianca":{"valor":<0-100>,"fornecedor":<0-100>,"geral":<0-100>}}
-
-Se nao identificar um campo use null. Nunca invente dados.`;
+  },700);
 
   try{
-    const isPDF = fotoMime==='application/pdf';
-
-    // PDF: converte primeira página para imagem via canvas antes de enviar
-    // (mais compatível com todos os modelos)
-    let b64Final = fotoBase64;
-    let mimeFinale = fotoMime;
-
-    if(isPDF){
+    // Se PDF: converter para imagem via pdf.js antes de enviar
+    let b64=fotoBase64, mime=fotoMime;
+    if(mime==='application/pdf'){
       try{
         if(!window.pdfjsLib){
           await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
           pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         }
-        const raw=atob(fotoBase64);
-        const bytes=new Uint8Array(raw.length);
+        const raw=atob(b64), bytes=new Uint8Array(raw.length);
         for(let i=0;i<raw.length;i++) bytes[i]=raw.charCodeAt(i);
         const pdf=await pdfjsLib.getDocument({data:bytes}).promise;
         const page=await pdf.getPage(1);
@@ -772,64 +746,48 @@ Se nao identificar um campo use null. Nunca invente dados.`;
         canvas.width=vp.width; canvas.height=vp.height;
         await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
         const dataUrl=canvas.toDataURL('image/jpeg',0.92);
-        b64Final=dataUrl.split(',')[1];
-        mimeFinale='image/jpeg';
-        // Atualizar preview com imagem renderizada
+        b64=dataUrl.split(',')[1];
+        mime='image/jpeg';
+        // mostrar preview da página renderizada
         const img=document.getElementById('img-preview');
-        if(img){ img.src=dataUrl; img.style.display='block'; }
+        if(img){img.src=dataUrl;img.style.display='block';}
       }catch(pdfErr){
-        console.warn('pdf.js falhou, tentando enviar PDF direto:', pdfErr);
-        // fallback: envia PDF como document (funciona no claude-sonnet-4-5+)
-        mimeFinale='application/pdf';
+        console.warn('pdf.js falhou:', pdfErr);
+        // mantém PDF original como fallback
       }
     }
 
-    const contentBlock = mimeFinale==='application/pdf'
-      ? {type:'document',source:{type:'base64',media_type:'application/pdf',data:b64Final}}
-      : {type:'image',source:{type:'base64',media_type:mimeFinale,data:b64Final}};
-
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:1000,
-        messages:[{role:'user',content:[contentBlock,{type:'text',text:prompt}]}]
-      })
-    });
-    const data=await resp.json();
-    clearInterval(stepTimer);
-    steps.forEach(s=>document.getElementById(s).classList.add('done'));
-
-    // Verificar erro da API
-    if(data.error){
-      console.error('API error:', data.error);
-      throw new Error(data.error.message||'Erro API');
+    // Chamar OCR via GAS (proxy — evita CORS com API Anthropic)
+    // Se não tiver GAS configurado, tenta direto (só funciona localhost)
+    let ocr;
+    if(!MODO_DEMO){
+      const res=await gasPost({acao:'ocr',base64:b64,mime:mime});
+      if(!res.ok) throw new Error(res.erro||'Erro OCR no servidor');
+      ocr=res.ocr;
+    } else {
+      // Modo demo: simula resposta OCR para teste visual
+      ocr={valor:65500,data:'2026-06-02',fornecedor:'TRR FAST DIESEL',cnpj:'**.***8.508/0001-**',
+           forma_pagamento:'PIX',descricao:'Comprovante PIX SICOOB',
+           confianca:{valor:98,fornecedor:98,geral:98}};
     }
 
-    let txt=data.content?.find(b=>b.type==='text')?.text||'{}';
-    txt=txt.replace(/```json|```/g,'').trim();
-    // Extrair JSON se vier com texto ao redor
-    const jsonMatch=txt.match(/\{[\s\S]*\}/);
-    const ocr=JSON.parse(jsonMatch?jsonMatch[0]:txt);
-
+    clearInterval(stepTimer);
+    steps.forEach(s=>document.getElementById(s).classList.add('done'));
     setTimeout(()=>{
       document.getElementById('ocr-loading').style.display='none';
       preencherCampos(ocr);
     },400);
 
-  } catch(err){
+  }catch(err){
     clearInterval(stepTimer);
-    console.error('OCR erro completo:', err);
+    console.error('OCR erro:', err);
     document.getElementById('ocr-loading').style.display='none';
     document.getElementById('ocr-fail').style.display='block';
-    // Mostrar erro real no botão para debug
     const sub=document.querySelector('.ocr-fail-sub');
     if(sub) sub.innerHTML='Erro: <code style="font-size:11px">'+err.message+'</code><br>Tente nova foto ou preencha manualmente.';
-    showToast('Erro: '+err.message,'red');
+    showToast('Erro OCR: '+err.message,'red');
   }
 }
-
 function preencherCampos(ocr){
   const mark=(id)=>{
     const el=document.getElementById(id);
