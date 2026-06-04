@@ -468,18 +468,23 @@ function gasPost(body){
 }
 
 // ── LOGIN ──
-async function renderLoginUsers(){
-  // Tenta carregar usuários do GAS; fallback para lista local
+function renderLoginUsers(){
+  // Sempre renderiza lista local imediatamente (sem esperar GAS)
+  // Garante que o login apareça mesmo com GAS lento ou offline
+  _renderUserCards(USUARIOS.map(function(u){
+    return {id:u.id,nome:u.nome,sigla:u.sigla,fazenda:u.fazenda};
+  }));
+
+  // Em paralelo, tenta atualizar do GAS (adiciona usuários novos da planilha)
   if(!MODO_DEMO){
-    try{
-      const res=await gasPost({acao:'usuarios'});
-      if(res.ok && res.usuarios?.length){
+    gasPost({acao:'usuarios'}).then(function(res){
+      if(res.ok && res.usuarios && res.usuarios.length){
         _renderUserCards(res.usuarios);
-        return;
       }
-    }catch(e){ console.warn('GAS indisponível, usando lista local'); }
+    }).catch(function(e){
+      console.warn('GAS usuários indisponível, usando lista local:', e.message);
+    });
   }
-  _renderUserCards(USUARIOS.map(u=>({id:u.id,nome:u.nome,sigla:u.sigla,fazenda:u.fazenda})));
 }
 
 function _renderUserCards(lista){
