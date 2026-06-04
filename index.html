@@ -247,7 +247,8 @@ tr:hover td{background:var(--bg)}
     </div>
 
     <div class="tabs">
-      <div class="tab active" onclick="switchTab('envio')"><i class="ti ti-bolt" style="font-size:13px;vertical-align:-1px;margin-right:3px"></i>Envio Rápido</div>
+      <div class="tab active" onclick="switchTab('envio')"><i class="ti ti-bolt" style="font-size:13px;vertical-align:-1px;margin-right:3px"></i>Comprovante</div>
+      <div class="tab" onclick="switchTab('nf')"><i class="ti ti-file-invoice" style="font-size:13px;vertical-align:-1px;margin-right:3px"></i>Nota Fiscal</div>
       <div class="tab" onclick="switchTab('lista')"><i class="ti ti-list" style="font-size:13px;vertical-align:-1px;margin-right:3px"></i>Lançamentos</div>
     </div>
 
@@ -358,6 +359,118 @@ tr:hover td{background:var(--bg)}
           </label>
           <button class="btn-salvar" id="btn-salvar" onclick="salvar()">
             <i class="ti ti-cloud-upload"></i>Salvar e enviar ao Drive
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- NOTA FISCAL -->
+    <div id="panel-nf" class="panel">
+
+      <!-- UPLOAD NF -->
+      <div class="upload-zone" id="nf-upload-zone" onclick="document.getElementById('nf-file-input').click()">
+        <input type="file" id="nf-file-input" accept="image/*,application/pdf" style="display:none" onchange="handleNFFile(event)">
+        <i class="ti ti-file-invoice big-icon uz-icon" id="nf-uz-icon"></i>
+        <div class="uz-title" id="nf-uz-title">Foto ou PDF da Nota Fiscal</div>
+        <div class="uz-sub">NF-e, DANFE, cupom fiscal · IA extrai todos os dados</div>
+      </div>
+
+      <div id="nf-preview-wrap" style="display:none"></div>
+      <input type="file" id="nf-file-retry" accept="image/*,application/pdf" style="display:none" onchange="handleNFFile(event)">
+
+      <!-- NF LOADING -->
+      <div class="ocr-loading" id="nf-loading">
+        <div class="ocr-spinner"></div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:4px">IA lendo a Nota Fiscal...</div>
+        <div style="font-size:12px;color:var(--muted)">Aguarde alguns segundos</div>
+        <div class="ocr-steps">
+          <div class="ocr-step" id="nf-step-1"><i class="ti ti-photo"></i>Processando documento</div>
+          <div class="ocr-step" id="nf-step-2"><i class="ti ti-scan"></i>Extraindo dados fiscais</div>
+          <div class="ocr-step" id="nf-step-3"><i class="ti ti-brain"></i>Identificando emitente, valores e itens</div>
+          <div class="ocr-step" id="nf-step-4"><i class="ti ti-check"></i>Preenchendo campos automaticamente</div>
+        </div>
+      </div>
+
+      <!-- NF FALHOU -->
+      <div class="ocr-fail" id="nf-fail">
+        <div class="ocr-fail-title"><i class="ti ti-mood-sad"></i>Não consegui ler a Nota Fiscal</div>
+        <div class="ocr-fail-sub">Tente uma foto mais nítida ou preencha manualmente.</div>
+        <div class="fail-btns">
+          <button class="btn-retry green" onclick="triggerNovaNF()"><i class="ti ti-camera"></i>Nova foto</button>
+          <button class="btn-retry outline" onclick="preencherNFManual()"><i class="ti ti-pencil"></i>Preencher manualmente</button>
+        </div>
+      </div>
+
+      <!-- NF RESULTADO -->
+      <div class="ocr-result" id="nf-result">
+        <div class="ocr-result-header">
+          <i class="ti ti-sparkles"></i>
+          <span>Nota Fiscal lida pela IA — confirme ou edite</span>
+          <div class="ocr-badge" id="nf-conf-badge">●●● ALTA</div>
+        </div>
+        <div class="ocr-fields">
+          <div class="ocr-grid">
+            <div class="ocr-field ocr-full">
+              <label>Emitente (Fornecedor)</label>
+              <input type="text" id="nf-emitente" placeholder="Razão social do emitente">
+              <div class="confidence"><div class="conf-bar"><div class="conf-fill" id="nf-conf-emit" style="width:0%"></div></div><span id="nf-conf-emit-txt"></span></div>
+            </div>
+            <div class="ocr-field">
+              <label>CNPJ Emitente</label>
+              <input type="text" id="nf-cnpj" placeholder="00.000.000/0001-00" style="font-family:var(--mono)">
+            </div>
+            <div class="ocr-field">
+              <label>Data de Emissão</label>
+              <input type="date" id="nf-data">
+            </div>
+            <div class="ocr-field">
+              <label>Número NF</label>
+              <input type="text" id="nf-numero" placeholder="000.000.000" style="font-family:var(--mono)">
+            </div>
+            <div class="ocr-field">
+              <label>Série</label>
+              <input type="text" id="nf-serie" placeholder="1" style="font-family:var(--mono)">
+            </div>
+            <div class="ocr-field">
+              <label>Valor Total (R$)</label>
+              <input type="number" id="nf-valor" placeholder="0,00" step="0.01">
+              <div class="confidence"><div class="conf-bar"><div class="conf-fill" id="nf-conf-val" style="width:0%"></div></div><span id="nf-conf-val-txt"></span></div>
+            </div>
+            <div class="ocr-field">
+              <label>Forma de Pagamento</label>
+              <select id="nf-pgto">
+                <option value="">Selecionar...</option>
+                <option>PIX</option><option>Cartão de crédito</option><option>Boleto</option><option>Dinheiro</option><option>Transferência</option>
+              </select>
+            </div>
+            <div class="ocr-field ocr-full">
+              <label>Chave de Acesso NF-e</label>
+              <input type="text" id="nf-chave" placeholder="0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000" style="font-family:var(--mono);font-size:11px">
+            </div>
+            <div class="ocr-field ocr-full">
+              <label>Descrição / Itens principais</label>
+              <input type="text" id="nf-descricao" placeholder="Ex: Filtro ar motor, óleo lubrificante...">
+            </div>
+            <div class="ocr-field ocr-full">
+              <label>Destino — máquina, benfeitoria ou insumo</label>
+              <div class="search-wrap">
+                <input type="text" id="nf-dest" placeholder="Buscar: NH, trator, fertilizante..." autocomplete="off" oninput="filtrarDestNF()" onfocus="mostrarDestNF()">
+                <i class="ti ti-search si"></i>
+                <div class="dropdown" id="nf-dest-dd"></div>
+              </div>
+              <input type="hidden" id="nf-dest-val">
+              <input type="hidden" id="nf-dest-grupo">
+            </div>
+          </div>
+
+          <button class="btn-trocar-foto" onclick="triggerNovaNF()">
+            <input type="file" id="nf-file-trocar" accept="image/*,application/pdf" style="display:none" onchange="handleNFFile(event)">
+            <i class="ti ti-camera-rotate"></i>Trocar foto / Re-analisar
+          </button>
+
+          <button class="btn-salvar" id="nf-btn-salvar" onclick="salvarNF()">
+            <i class="ti ti-cloud-upload"></i>Salvar NF e enviar ao Drive
           </button>
         </div>
       </div>
@@ -1136,7 +1249,7 @@ function resetarEnvio(){
 
 // ── TABS / LISTA ──
 function switchTab(t){
-  ['envio','lista'].forEach((n,i)=>{
+  ['envio','nf','lista'].forEach(function(n,i){
     document.querySelectorAll('.tab')[i].classList.toggle('active',n===t);
     document.getElementById('panel-'+n).classList.toggle('active',n===t);
   });
@@ -1177,6 +1290,259 @@ function showToast(msg,type=''){
   t.className='toast'+(type?' '+type:'');
   t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+// ── NOTA FISCAL ─────────────────────────────────────────
+var nfFotoBase64=null, nfFotoMime=null, nfUploadedFile=null;
+
+function handleNFFile(e){
+  var files=e.target.files;
+  if(!files||!files[0]) return;
+  var f=files[0];
+  nfUploadedFile=f;
+  var isPDF=f.type==='application/pdf'||f.name.toLowerCase().endsWith('.pdf');
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    var result=ev.target.result;
+    nfFotoBase64=result.split(',')[1];
+    nfFotoMime=isPDF?'application/pdf':(f.type||'image/jpeg');
+    // Preview
+    var wrap=document.getElementById('nf-preview-wrap');
+    if(isPDF){
+      wrap.innerHTML='<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:1rem">'
+        +'<div style="width:42px;height:42px;background:#FDE8E8;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-file-type-pdf" style="font-size:24px;color:#A32D2D"></i></div>'
+        +'<div style="flex:1"><div style="font-size:13px;font-weight:600">'+f.name+'</div>'
+        +'<div style="font-size:12px;color:var(--muted)">'+(f.size/1024).toFixed(0)+' KB · PDF</div></div>'
+        +'<button onclick="removerNF()" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:20px;padding:4px"><i class="ti ti-x"></i></button></div>';
+    } else {
+      wrap.innerHTML='<div style="position:relative;margin-bottom:1rem">'
+        +'<img src="'+result+'" style="width:100%;max-height:180px;object-fit:contain;border-radius:var(--radius);border:1px solid var(--border)">'
+        +'<button onclick="removerNF()" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);color:#fff;border:none;width:28px;height:28px;border-radius:50%;cursor:pointer"><i class="ti ti-x"></i></button></div>';
+    }
+    wrap.style.display='block';
+    document.getElementById('nf-upload-zone').style.display='none';
+    document.getElementById('nf-fail').style.display='none';
+    document.getElementById('nf-result').style.display='none';
+    rodarOCR_NF();
+  };
+  reader.readAsDataURL(f);
+}
+
+async function rodarOCR_NF(){
+  if(!nfFotoBase64){showToast('Nenhuma foto carregada','red');return;}
+  document.getElementById('nf-loading').style.display='block';
+  document.getElementById('nf-result').style.display='none';
+  document.getElementById('nf-fail').style.display='none';
+
+  var steps=['nf-step-1','nf-step-2','nf-step-3','nf-step-4'];
+  steps.forEach(function(s){document.getElementById(s).classList.remove('done','active');});
+  var si=0;
+  var st=setInterval(function(){
+    if(si>0){try{document.getElementById(steps[si-1]).classList.replace('active','done');}catch(e){}}
+    if(si<steps.length){document.getElementById(steps[si]).classList.add('active');si++;}
+  },700);
+
+  try{
+    var b64=nfFotoBase64, mime=nfFotoMime;
+
+    // PDF: tentar texto primeiro, senão renderizar como imagem
+    if(mime==='application/pdf'){
+      if(!window.pdfjsLib){
+        await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+        pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+      var raw=atob(b64), bytes=new Uint8Array(raw.length);
+      for(var i=0;i<raw.length;i++) bytes[i]=raw.charCodeAt(i);
+      var pdf=await pdfjsLib.getDocument({data:bytes}).promise;
+      var texto='';
+      for(var p=1;p<=Math.min(pdf.numPages,3);p++){
+        var pg=await pdf.getPage(p);
+        var tc=await pg.getTextContent();
+        texto+=tc.items.map(function(it){return it.str;}).join(' ')+' ';
+      }
+      if(texto.trim().length>20){
+        var res=await gasPostFetch({acao:'ocr_nf_texto',texto:texto.substring(0,4000)});
+        clearInterval(st); steps.forEach(function(s){document.getElementById(s).classList.add('done');});
+        document.getElementById('nf-loading').style.display='none';
+        if(!res.ok) throw new Error(res.erro);
+        preencherCamposNF(res.ocr);
+        return;
+      }
+      // PDF sem texto: renderizar como imagem
+      var page1=await pdf.getPage(1);
+      var scale=1.5, vp=page1.getViewport({scale:scale});
+      if(vp.width>600){ scale=scale*(600/vp.width); vp=page1.getViewport({scale:scale}); }
+      var canvas=document.createElement('canvas');
+      canvas.width=vp.width; canvas.height=vp.height;
+      await page1.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+      var quality=0.55, du=canvas.toDataURL('image/jpeg',quality);
+      b64=du.split(',')[1];
+      while(b64.length>20000&&quality>0.2){ quality-=0.1; du=canvas.toDataURL('image/jpeg',quality); b64=du.split(',')[1]; }
+      mime='image/jpeg';
+    } else {
+      // Imagem: reduzir para leitura
+      var imgEl=new Image();
+      await new Promise(function(res,rej){imgEl.onload=res;imgEl.onerror=rej;imgEl.src='data:'+mime+';base64,'+b64;});
+      var cv=document.createElement('canvas');
+      var sc=Math.min(1,600/imgEl.width);
+      cv.width=Math.floor(imgEl.width*sc); cv.height=Math.floor(imgEl.height*sc);
+      cv.getContext('2d').drawImage(imgEl,0,0,cv.width,cv.height);
+      var quality=0.55, du=cv.toDataURL('image/jpeg',quality);
+      b64=du.split(',')[1];
+      while(b64.length>20000&&quality>0.2){ quality-=0.1; du=cv.toDataURL('image/jpeg',quality); b64=du.split(',')[1]; }
+    }
+
+    var res=await gasPostFetch({acao:'ocr_nf',base64:b64,mime:'image/jpeg'});
+    clearInterval(st);
+    steps.forEach(function(s){document.getElementById(s).classList.add('done');});
+    document.getElementById('nf-loading').style.display='none';
+    if(!res.ok) throw new Error(res.erro);
+    preencherCamposNF(res.ocr);
+
+  }catch(err){
+    clearInterval(st);
+    document.getElementById('nf-loading').style.display='none';
+    document.getElementById('nf-fail').style.display='block';
+    var sub=document.querySelector('#nf-fail .ocr-fail-sub');
+    if(sub) sub.innerHTML='Erro: <code style="font-size:11px">'+err.message+'</code>';
+    showToast('Erro NF: '+err.message,'red');
+  }
+}
+
+function preencherCamposNF(ocr){
+  if(!ocr) return;
+  var set=function(id,val){var el=document.getElementById(id);if(el&&val!=null){el.value=val;el.classList.add('ai-filled');}};
+  set('nf-emitente', ocr.emitente||ocr.fornecedor||'');
+  set('nf-cnpj',     ocr.cnpj||'');
+  set('nf-data',     ocr.data||'');
+  set('nf-numero',   ocr.numero||'');
+  set('nf-serie',    ocr.serie||'');
+  set('nf-valor',    ocr.valor||'');
+  set('nf-pgto',     ocr.forma_pagamento||'');
+  set('nf-chave',    ocr.chave_acesso||'');
+  set('nf-descricao',ocr.descricao||'');
+
+  // Confiança
+  var cg=ocr.confianca&&ocr.confianca.geral||0;
+  var badge=document.getElementById('nf-conf-badge');
+  if(badge){
+    if(cg>=80){badge.textContent='●●● ALTA';badge.style.background='var(--green)';}
+    else if(cg>=50){badge.textContent='●●○ MÉDIA';badge.style.background='var(--amber)';}
+    else{badge.textContent='●○○ BAIXA';badge.style.background='var(--red)';}
+  }
+  var cv=ocr.confianca&&ocr.confianca.valor||0;
+  var ce=ocr.confianca&&ocr.confianca.emitente||ocr.confianca&&ocr.confianca.fornecedor||0;
+  var ef=document.getElementById('nf-conf-emit'); if(ef) ef.style.width=ce+'%';
+  var et=document.getElementById('nf-conf-emit-txt'); if(et) et.textContent=ce+'% confiança';
+  var vf=document.getElementById('nf-conf-val'); if(vf) vf.style.width=cv+'%';
+  var vt=document.getElementById('nf-conf-val-txt'); if(vt) vt.textContent=cv+'% confiança';
+
+  document.getElementById('nf-result').style.display='block';
+  showToast('Nota Fiscal lida ✓ — confirme os dados','green');
+}
+
+function removerNF(){
+  nfFotoBase64=null; nfUploadedFile=null;
+  document.getElementById('nf-preview-wrap').style.display='none';
+  document.getElementById('nf-upload-zone').style.display='block';
+  document.getElementById('nf-result').style.display='none';
+  document.getElementById('nf-fail').style.display='none';
+  document.getElementById('nf-loading').style.display='none';
+  document.getElementById('nf-file-input').value='';
+}
+
+function triggerNovaNF(){
+  nfFotoBase64=null; nfUploadedFile=null;
+  document.getElementById('nf-fail').style.display='none';
+  document.getElementById('nf-result').style.display='none';
+  document.getElementById('nf-loading').style.display='none';
+  document.getElementById('nf-file-retry').value='';
+  document.getElementById('nf-file-retry').click();
+}
+
+function preencherNFManual(){
+  document.getElementById('nf-fail').style.display='none';
+  document.getElementById('nf-result').style.display='block';
+  document.getElementById('nf-data').value=new Date().toISOString().split('T')[0];
+  var badge=document.getElementById('nf-conf-badge');
+  if(badge){badge.textContent='Manual';badge.style.background='var(--muted)';}
+}
+
+function filtrarDestNF(){
+  var q=document.getElementById('nf-dest').value.toLowerCase();
+  var dd=document.getElementById('nf-dest-dd');
+  dd.innerHTML=buildDestOpts(q)||'<div style="padding:10px;font-size:13px;color:var(--muted)">Nenhum resultado</div>';
+  dd.classList.toggle('open',q.length>0);
+}
+function mostrarDestNF(){
+  var q=document.getElementById('nf-dest').value.toLowerCase();
+  var dd=document.getElementById('nf-dest-dd');
+  if(!q){dd.innerHTML=buildDestOpts('');dd.classList.add('open');}
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('#nf-dest')&&!e.target.closest('#nf-dest-dd'))
+    document.getElementById('nf-dest-dd').classList.remove('open');
+});
+
+async function salvarNF(){
+  var val=parseFloat(document.getElementById('nf-valor').value);
+  var dest=document.getElementById('nf-dest-val').value||document.getElementById('nf-dest').value;
+  var emitente=document.getElementById('nf-emitente').value;
+  if(!emitente||isNaN(val)||val<=0){showToast('Preencha emitente e valor','red');return;}
+
+  var btn=document.getElementById('nf-btn-salvar');
+  btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>Salvando...';
+  btn.disabled=true;
+
+  var grupo=document.getElementById('nf-dest-grupo').value||'GERAL';
+  var payload={
+    acao:'salvar',
+    tipo:'nf',
+    usuario_id:usuario.id, fazenda:usuario.fazenda,
+    fornecedor:emitente,
+    cnpj:document.getElementById('nf-cnpj').value||'',
+    valor:val,
+    forma_pgto:document.getElementById('nf-pgto').value||'',
+    conta:contaAtual.label,
+    destino:dest||'NF',
+    grupo:grupo,
+    observacao:'NF '+document.getElementById('nf-numero').value+' | '+document.getElementById('nf-descricao').value,
+    lido_ia:!!nfFotoBase64,
+    confianca_ia:null,
+    data_compra:document.getElementById('nf-data').value||new Date().toISOString().split('T')[0],
+  };
+
+  try{
+    showToast('Salvando NF...','');
+    var res=await gasPostJSONP(payload);
+    if(res.ok){
+      showToast('NF salva no Sheets ✓','green');
+      if(nfFotoBase64){
+        try{
+          var resFoto=await gasPostFetch({acao:'salvar_foto',id:res.id,foto_base64:nfFotoBase64,
+            foto_mime:nfFotoMime||'image/jpeg',foto_nome:nfUploadedFile&&nfUploadedFile.name||'nf.jpg',
+            usuario_id:usuario.id,grupo:grupo,data_compra:payload.data_compra});
+          if(resFoto.ok) showToast('NF e foto salvos ✓','green');
+        }catch(ef){console.warn('Foto NF erro:',ef);}
+      }
+      lancamentos.unshift({data:payload.data_compra,fornecedor:emitente,destino:dest||'NF',
+        valor:val,conta:contaAtual.label,comp:!!nfFotoBase64,ia:!!nfFotoBase64});
+      atualizaMetricas();
+      // Reset
+      removerNF();
+      ['nf-emitente','nf-cnpj','nf-numero','nf-serie','nf-valor','nf-chave','nf-descricao','nf-dest','nf-dest-val','nf-dest-grupo'].forEach(function(id){
+        var el=document.getElementById(id); if(el) el.value='';
+      });
+      document.getElementById('nf-pgto').value='';
+      document.getElementById('nf-result').style.display='none';
+    } else {
+      showToast('Erro: '+(res.erro||'desconhecido'),'red');
+    }
+  }catch(e){
+    showToast('Erro: '+e.message,'red');
+  }
+  btn.innerHTML='<i class="ti ti-cloud-upload"></i>Salvar NF e enviar ao Drive';
+  btn.disabled=false;
 }
 
 // ── INIT ──
