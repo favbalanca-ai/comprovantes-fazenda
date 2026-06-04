@@ -493,14 +493,9 @@ async function gasPostFetch(body){
   meta.chunks_total=chunks.length;
   meta.session=Date.now().toString();
 
-  // Para sessões pequenas (<=3 chunks = 3KB), enviar tudo junto
-  if(chunks.length<=3){
-    meta.base64=b;
-    return gasPostJSONP(meta);
-  }
-
-  // Para imagens maiores: reduzir ainda mais no caller
-  throw new Error('Imagem muito grande mesmo após compressão ('+Math.round(b.length/1024)+'KB). Tente foto menor.');
+  // Sempre enviar via fetch POST (sem limite de tamanho)
+  meta.base64=b;
+  return gasPostFetch(meta);
 }
 
 // ── LOGIN ──
@@ -820,38 +815,36 @@ async function rodarOCR(){
         var page1=await pdf.getPage(1);
         _setStep(3);
 
-        // Renderizar em baixa resolução para caber no JSONP (limite ~6KB base64)
-        // GAS aceita URLs de até ~8000 chars, base64 encoded = ~3x maior
-        var scale=1.0;
+        // Renderizar com qualidade suficiente para leitura de texto
+        var scale=1.5;
         var vp=page1.getViewport({scale:scale});
         var canvas=document.createElement('canvas');
 
-        // Limitar largura máxima a 400px
-        var maxW=400;
-        if(vp.width>maxW){ scale=maxW/vp.width; vp=page1.getViewport({scale:scale}); }
+        // Limitar largura máxima a 600px para manter legibilidade
+        var maxW=600;
+        if(vp.width>maxW){ scale=scale*(maxW/vp.width); vp=page1.getViewport({scale:scale}); }
         canvas.width=vp.width;
         canvas.height=vp.height;
         await page1.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
 
-        // Comprimir agressivamente — alvo: base64 < 5000 chars
-        var quality=0.3;
+        // Comprimir mantendo legibilidade — alvo: base64 < 20000 chars
+        var quality=0.6;
         var dataUrl=canvas.toDataURL('image/jpeg',quality);
         b64final=dataUrl.split(',')[1];
 
-        // Reduzir mais se necessário
-        while(b64final.length > 5000 && quality > 0.1){
-          quality=Math.max(0.1,quality-0.05);
+        while(b64final.length > 20000 && quality > 0.2){
+          quality=Math.max(0.2,quality-0.1);
           dataUrl=canvas.toDataURL('image/jpeg',quality);
           b64final=dataUrl.split(',')[1];
         }
 
-        // Se ainda grande, cortar resolução pela metade
-        if(b64final.length > 5000){
+        // Se ainda grande, reduzir resolução mantendo qualidade
+        if(b64final.length > 20000){
           var c2=document.createElement('canvas');
-          c2.width=Math.floor(canvas.width*0.5);
-          c2.height=Math.floor(canvas.height*0.5);
+          c2.width=Math.floor(canvas.width*0.7);
+          c2.height=Math.floor(canvas.height*0.7);
           c2.getContext('2d').drawImage(canvas,0,0,c2.width,c2.height);
-          dataUrl=c2.toDataURL('image/jpeg',0.2);
+          dataUrl=c2.toDataURL('image/jpeg',0.5);
           b64final=dataUrl.split(',')[1];
         }
 
