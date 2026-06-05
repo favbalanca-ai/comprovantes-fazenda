@@ -1108,33 +1108,55 @@ function preencherManual(){
 
 // ── DESTINO ──
 function buildDestOpts(q){
-  let html='';
-  Object.entries(MAQUINAS).forEach(([g,items])=>{
-    const hits=items.filter(m=>!q||m.toLowerCase().includes(q)||g.toLowerCase().includes(q));
+  var html='';
+  var allGroups=Object.assign({},MAQUINAS,EXTRAS);
+  Object.keys(allGroups).forEach(function(g){
+    var items=allGroups[g];
+    var hits=items.filter(function(m){return !q||m.toLowerCase().includes(q)||g.toLowerCase().includes(q);});
     if(hits.length){
-      html+=`<div class="dd-group">${g}</div>`;
-      hits.slice(0,5).forEach(m=>{html+=`<div class="dd-item" onclick="selDest('${m.replace(/'/g,"\\'")}','${g.replace(/'/g,"\\'")}')"> ${m}</div>`;});
-    }
-  });
-  Object.entries(EXTRAS).forEach(([g,items])=>{
-    const hits=items.filter(m=>!q||m.toLowerCase().includes(q)||g.toLowerCase().includes(q));
-    if(hits.length){
-      html+=`<div class="dd-group">${g}</div>`;
-      hits.forEach(m=>{html+=`<div class="dd-item" onclick="selDest('${m.replace(/'/g,"\\'")}','${g.replace(/'/g,"\\'")}')"> ${m}</div>`;});
+      html+='<div class="dd-group">'+g+'</div>';
+      hits.slice(0,8).forEach(function(m){
+        var idx=_ddItems.length;
+        _ddItems.push({nome:m,grupo:g});
+        html+='<div class="dd-item" data-idx="'+idx+'">'+m+'</div>';
+      });
     }
   });
   return html;
 }
+
+// Cache de itens do dropdown para evitar problemas de escape
+var _ddItems=[];
+
+function _initDDClick(containerId, inputId, valId, grupoId){
+  var dd=document.getElementById(containerId);
+  if(!dd) return;
+  dd.addEventListener('click',function(e){
+    var item=e.target.closest('.dd-item');
+    if(!item) return;
+    var idx=parseInt(item.getAttribute('data-idx'));
+    if(isNaN(idx)||!_ddItems[idx]) return;
+    var d=_ddItems[idx];
+    document.getElementById(inputId).value=d.nome;
+    if(valId) document.getElementById(valId).value=d.nome;
+    if(grupoId) document.getElementById(grupoId).value=d.grupo;
+    dd.classList.remove('open');
+  });
+}
 function filtrarDest(){
-  const q=document.getElementById('f-dest').value.toLowerCase();
-  const dd=document.getElementById('dest-dd');
-  dd.innerHTML=buildDestOpts(q)||'<div style="padding:10px;font-size:13px;color:var(--muted)">Nenhum resultado</div>';
+  _ddItems=[];
+  var q=document.getElementById('f-dest').value.toLowerCase();
+  var dd=document.getElementById('dest-dd');
+  var html=buildDestOpts(q);
+  dd.innerHTML=html||'<div style="padding:10px;font-size:13px;color:var(--muted)">Nenhum resultado</div>';
   dd.classList.toggle('open',q.length>0);
 }
 function mostrarDest(){
-  const q=document.getElementById('f-dest').value.toLowerCase();
-  const dd=document.getElementById('dest-dd');
-  if(!q){dd.innerHTML=buildDestOpts('');dd.classList.add('open');}
+  _ddItems=[];
+  var q=document.getElementById('f-dest').value.toLowerCase();
+  var dd=document.getElementById('dest-dd');
+  dd.innerHTML=buildDestOpts(q||'');
+  dd.classList.add('open');
 }
 function selDest(nome,grupo){
   document.getElementById('f-dest').value=nome;
@@ -1142,6 +1164,11 @@ function selDest(nome,grupo){
   document.getElementById('f-dest-grupo').value=grupo;
   document.getElementById('dest-dd').classList.remove('open');
 }
+// Inicializar listeners de click nos dropdowns após DOM carregado
+document.addEventListener('DOMContentLoaded',function(){
+  _initDDClick('dest-dd','f-dest','f-dest-val','f-dest-grupo');
+  _initDDClick('nf-dest-dd','nf-dest','nf-dest-val','nf-dest-grupo');
+});
 document.addEventListener('click',function(e){
   if(!e.target.closest('#f-dest')&&!e.target.closest('#dest-dd'))
     document.getElementById('dest-dd').classList.remove('open');
@@ -1487,15 +1514,19 @@ function preencherNFManual(){
 }
 
 function filtrarDestNF(){
+  _ddItems=[];
   var q=document.getElementById('nf-dest').value.toLowerCase();
   var dd=document.getElementById('nf-dest-dd');
-  dd.innerHTML=buildDestOpts(q)||'<div style="padding:10px;font-size:13px;color:var(--muted)">Nenhum resultado</div>';
+  var html=buildDestOpts(q);
+  dd.innerHTML=html||'<div style="padding:10px;font-size:13px;color:var(--muted)">Nenhum resultado</div>';
   dd.classList.toggle('open',q.length>0);
 }
 function mostrarDestNF(){
+  _ddItems=[];
   var q=document.getElementById('nf-dest').value.toLowerCase();
   var dd=document.getElementById('nf-dest-dd');
-  if(!q){dd.innerHTML=buildDestOpts('');dd.classList.add('open');}
+  dd.innerHTML=buildDestOpts(q||'');
+  dd.classList.add('open');
 }
 document.addEventListener('click',function(e){
   if(!e.target.closest('#nf-dest')&&!e.target.closest('#nf-dest-dd'))
