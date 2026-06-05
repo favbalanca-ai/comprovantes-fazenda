@@ -1241,6 +1241,7 @@ async function salvar(){
               usuario_id: usuario.id,
               grupo: grupo,
               data_compra: payload.data_compra,
+              fornecedor: payload.fornecedor||'',
             };
             const resFoto=await gasPostFetch(payloadFoto);
             console.log('Resposta foto:', JSON.stringify(resFoto));
@@ -1568,9 +1569,12 @@ async function salvarNF(){
       showToast('NF salva no Sheets ✓','green');
       if(nfFotoBase64){
         try{
+          var nfNum=document.getElementById('nf-numero').value||'';
+          var nfEmit=document.getElementById('nf-emitente').value||'';
           var resFoto=await gasPostFetch({acao:'salvar_foto',id:res.id,foto_base64:nfFotoBase64,
             foto_mime:nfFotoMime||'image/jpeg',foto_nome:nfUploadedFile&&nfUploadedFile.name||'nf.jpg',
-            usuario_id:usuario.id,grupo:grupo,data_compra:payload.data_compra});
+            usuario_id:usuario.id,grupo:grupo,data_compra:payload.data_compra,
+            fornecedor:nfEmit, numero_nf:nfNum});
           if(resFoto.ok) showToast('NF e foto salvos ✓','green');
         }catch(ef){console.warn('Foto NF erro:',ef);}
       }
