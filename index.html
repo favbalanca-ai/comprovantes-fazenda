@@ -563,13 +563,26 @@ function gasPost(body){
 function gasPostJSONP(body){
   return new Promise(function(resolve,reject){
     var cbName='_gcb'+Date.now();
-    var payload=encodeURIComponent(JSON.stringify(body));
+    var bodyStr=JSON.stringify(body);
+    var payload=encodeURIComponent(bodyStr);
     var url=GAS_URL+'?payload='+payload+'&callback='+cbName;
+    console.log('JSONP acao='+body.acao+' | payload='+bodyStr.length+'chars | url='+url.length+'chars');
+    if(url.length>8000){
+      console.error('URL muito longa: '+url.length+' chars — GAS vai rejeitar');
+      reject(new Error('Payload muito grande para JSONP: '+url.length+' chars'));
+      return;
+    }
     var tag=document.createElement('script');
     var timer=setTimeout(function(){cleanup();reject(new Error('Timeout GAS 30s'));},30000);
-    window[cbName]=function(data){cleanup();resolve(data);};
+    window[cbName]=function(data){
+      console.log('JSONP resposta acao='+body.acao+':', JSON.stringify(data));
+      cleanup();resolve(data);
+    };
     function cleanup(){clearTimeout(timer);delete window[cbName];if(tag.parentNode)tag.parentNode.removeChild(tag);}
-    tag.onerror=function(){cleanup();reject(new Error('Erro rede GAS'));};
+    tag.onerror=function(){
+      console.error('JSONP tag.onerror — URL rejeitada pelo GAS. Tamanho: '+url.length);
+      cleanup();reject(new Error('Erro rede GAS — URL: '+url.length+' chars'));
+    };
     tag.src=url;
     document.head.appendChild(tag);
   });
@@ -1167,7 +1180,7 @@ async function salvar(){
     observacao:  obsVal,
     lido_ia:     !!fotoBase64,
     confianca_ia:null,
-    data_compra: document.getElementById('f-data').value||new Date().toISOString().split('T')[0],
+    data_compra: (document.getElementById('f-data').value||'').substring(0,10)||new Date().toISOString().substring(0,10),
   };
 
   let urlDrive='';
@@ -1514,7 +1527,7 @@ async function salvarNF(){
     observacao:'NF '+document.getElementById('nf-numero').value+' | '+document.getElementById('nf-descricao').value,
     lido_ia:!!nfFotoBase64,
     confianca_ia:null,
-    data_compra:document.getElementById('nf-data').value||new Date().toISOString().split('T')[0],
+    data_compra:(document.getElementById('nf-data').value||'').substring(0,10)||new Date().toISOString().substring(0,10),
   };
 
   try{
