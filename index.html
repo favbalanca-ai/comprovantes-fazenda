@@ -1047,7 +1047,7 @@ function preencherCampos(ocr){
   };
 
   if(ocr.valor!=null){document.getElementById('f-valor').value=ocr.valor;}
-  if(ocr.data){document.getElementById('f-data').value=ocr.data;}
+  if(ocr.data){document.getElementById('f-data').value=String(ocr.data||'').substring(0,10);}
   else{document.getElementById('f-data').value=new Date().toISOString().split('T')[0];}
   if(ocr.fornecedor){document.getElementById('f-fornecedor').value=ocr.fornecedor;}
   if(ocr.cnpj){document.getElementById('f-cnpj').value=ocr.cnpj;}
@@ -1432,7 +1432,7 @@ function preencherCamposNF(ocr){
   var set=function(id,val){var el=document.getElementById(id);if(el&&val!=null){el.value=val;el.classList.add('ai-filled');}};
   set('nf-emitente', ocr.emitente||ocr.fornecedor||'');
   set('nf-cnpj',     ocr.cnpj||'');
-  set('nf-data',     ocr.data||'');
+  set('nf-data',     String(ocr.data||'').substring(0,10));
   set('nf-numero',   ocr.numero||'');
   set('nf-serie',    ocr.serie||'');
   set('nf-valor',    ocr.valor||'');
