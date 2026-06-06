@@ -147,24 +147,34 @@ input,select,button,textarea{font-family:var(--font)}
 .img-preview{width:100%;max-height:200px;object-fit:contain;border-radius:var(--radius);border:1px solid var(--border);display:block;background:var(--bg)}
 .img-remove{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);color:#fff;border:none;width:28px;height:28px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px}
 .img-retry{position:absolute;bottom:8px;right:8px;background:var(--green);color:#fff;border:none;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;display:flex;align-items:center;gap:4px}
-.scanner-modal{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:1rem}
+.scanner-modal{position:fixed;inset:0;background:#1a1a1a;z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:flex-start;padding:0;overflow:hidden}
 .scanner-modal.open{display:flex}
-.scanner-title{color:#fff;font-size:16px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
-.scanner-canvas-wrap{position:relative;width:100%;max-width:500px;background:#000;border-radius:var(--radius);overflow:hidden}
-#scanner-video{width:100%;display:block;border-radius:var(--radius)}
-#scanner-overlay{position:absolute;inset:0;pointer-events:none}
-.scanner-corners span{position:absolute;width:24px;height:24px;border-color:#1D9E75;border-style:solid;border-width:0}
-.scanner-corners span:nth-child(1){top:10px;left:10px;border-top-width:3px;border-left-width:3px}
-.scanner-corners span:nth-child(2){top:10px;right:10px;border-top-width:3px;border-right-width:3px}
-.scanner-corners span:nth-child(3){bottom:10px;left:10px;border-bottom-width:3px;border-left-width:3px}
-.scanner-corners span:nth-child(4){bottom:10px;right:10px;border-bottom-width:3px;border-right-width:3px}
-.scanner-btns{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;justify-content:center}
-.scanner-btn{padding:10px 20px;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;border:none;display:flex;align-items:center;gap:6px;font-family:var(--font)}
-.scanner-btn.capture{background:var(--green);color:#fff}
+.scanner-header{width:100%;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(0,0,0,.5);z-index:2;flex-shrink:0}
+.scanner-title{color:#fff;font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px;margin:0}
+/* Área da câmera ocupa todo o espaço disponível */
+.scanner-camera-area{flex:1;width:100%;position:relative;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center}
+#scanner-video{width:100%;height:100%;object-fit:cover;display:block}
+#scanner-overlay-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+/* Guia A4 sobre o vídeo */
+.a4-guide{position:absolute;border:2.5px solid #1D9E75;border-radius:4px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none;z-index:1;
+  /* A4 proporcao 1:1.414 — centrado com margens */
+  top:50%;left:50%;transform:translate(-50%,-50%);
+  width:min(80vw,calc(80vh/1.414));
+  height:min(calc(80vw*1.414),80vh);
+}
+.a4-corner{position:absolute;width:20px;height:20px;border-color:#1D9E75;border-style:solid;border-width:0}
+.a4-corner.tl{top:-2px;left:-2px;border-top-width:4px;border-left-width:4px;border-radius:3px 0 0 0}
+.a4-corner.tr{top:-2px;right:-2px;border-top-width:4px;border-right-width:4px;border-radius:0 3px 0 0}
+.a4-corner.bl{bottom:-2px;left:-2px;border-bottom-width:4px;border-left-width:4px;border-radius:0 0 0 3px}
+.a4-corner.br{bottom:-2px;right:-2px;border-bottom-width:4px;border-right-width:4px;border-radius:0 0 3px 0}
+.scanner-footer{width:100%;padding:14px 16px;background:rgba(0,0,0,.5);display:flex;flex-direction:column;align-items:center;gap:10px;flex-shrink:0}
+.scanner-hint{color:rgba(255,255,255,.7);font-size:12px;text-align:center;line-height:1.4}
+.scanner-btns{display:flex;gap:10px;width:100%;justify-content:center}
+.scanner-btn{padding:11px 24px;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;border:none;display:flex;align-items:center;gap:6px;font-family:var(--font)}
+.scanner-btn.capture{background:var(--green);color:#fff;flex:1;justify-content:center;max-width:240px}
 .scanner-btn.capture:hover{background:#0F5A44}
-.scanner-btn.cancel{background:rgba(255,255,255,.15);color:#fff}
-.scanner-hint{color:rgba(255,255,255,.6);font-size:12px;margin-top:8px;text-align:center}
-.scan-processing{color:#fff;font-size:14px;margin-top:12px;display:none;align-items:center;gap:8px}
+.scanner-btn.cancel{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3)}
+.scan-processing{color:#fff;font-size:13px;display:none;align-items:center;gap:8px}
 .upload-options{display:flex;gap:8px;margin-top:10px;justify-content:center;flex-wrap:wrap}
 .upload-opt-btn{padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:var(--card);color:var(--text);display:flex;align-items:center;gap:6px;font-family:var(--font);transition:all .15s}
 .upload-opt-btn:hover{border-color:var(--green);color:var(--green);background:var(--gl)}
@@ -532,20 +542,37 @@ tr:hover td{background:var(--bg)}
 
 <!-- MODAL SCANNER -->
 <div class="scanner-modal" id="scanner-modal">
-  <div class="scanner-title"><i class="ti ti-scan" style="color:var(--green)"></i>Scanner de Documento</div>
-  <div class="scanner-canvas-wrap" style="position:relative;width:100%;max-width:500px">
-    <video id="scanner-video" autoplay playsinline muted style="width:100%;display:block;border-radius:8px"></video>
-    <canvas id="scanner-overlay-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;border-radius:8px"></canvas>
+  <div class="scanner-header">
+    <div class="scanner-title"><i class="ti ti-scan" style="color:var(--green)"></i>Scanner de Documento</div>
+    <button class="scanner-btn cancel" style="padding:6px 12px;font-size:13px" onclick="fecharScanner()"><i class="ti ti-x"></i>Fechar</button>
+  </div>
+
+  <div class="scanner-camera-area">
+    <video id="scanner-video" autoplay playsinline muted></video>
+    <canvas id="scanner-overlay-canvas"></canvas>
     <canvas id="scanner-capture-canvas" style="display:none"></canvas>
+    <!-- Guia A4 -->
+    <div class="a4-guide" id="a4-guide">
+      <div class="a4-corner tl"></div>
+      <div class="a4-corner tr"></div>
+      <div class="a4-corner bl"></div>
+      <div class="a4-corner br"></div>
+    </div>
   </div>
-  <div class="scanner-hint" id="scanner-hint">Aponte para o documento · Detecção automática de bordas</div>
-  <div class="scanner-btns">
-    <button class="scanner-btn capture" id="scanner-capture-btn" onclick="capturarScanner()"><i class="ti ti-camera"></i>Capturar e Processar</button>
-    <button class="scanner-btn cancel" onclick="fecharScanner()"><i class="ti ti-x"></i>Cancelar</button>
-  </div>
-  <div class="scan-processing" id="scan-processing" style="display:none;color:#fff;margin-top:10px;align-items:center;gap:8px">
-    <div class="ocr-spinner" style="width:20px;height:20px;margin:0;border-color:rgba(255,255,255,.3);border-top-color:#fff"></div>
-    <span id="scan-proc-txt">Processando imagem...</span>
+
+  <div class="scanner-footer">
+    <div class="scanner-hint" id="scanner-hint">
+      Alinhe o documento dentro do quadro verde · Boa iluminação · Sem sombras
+    </div>
+    <div class="scanner-btns">
+      <button class="scanner-btn capture" id="scanner-capture-btn" onclick="capturarScanner()">
+        <i class="ti ti-camera"></i>Capturar e Processar
+      </button>
+    </div>
+    <div class="scan-processing" id="scan-processing">
+      <div class="ocr-spinner" style="width:18px;height:18px;margin:0;border-color:rgba(255,255,255,.3);border-top-color:#fff"></div>
+      <span id="scan-proc-txt">Processando...</span>
+    </div>
   </div>
 </div>
 
@@ -1272,7 +1299,15 @@ async function salvar(){
       delete payloadSemFoto.foto_mime;
       delete payloadSemFoto.foto_nome;
 
-      console.log('Salvando lançamento no Sheets...');
+      console.log('=== PAYLOAD ENVIADO ===');
+      console.log('Fornecedor:', payloadSemFoto.fornecedor);
+      console.log('Valor:', payloadSemFoto.valor);
+      console.log('Data:', payloadSemFoto.data_compra);
+      console.log('Destino:', payloadSemFoto.destino);
+      console.log('Grupo:', payloadSemFoto.grupo);
+      console.log('Numero NF:', payloadSemFoto.numero_nf);
+      console.log('CNPJ:', payloadSemFoto.cnpj);
+      console.log('Payload completo:', JSON.stringify(payloadSemFoto));
       const res=await gasPostJSONP(payloadSemFoto);
       console.log('Resposta salvar:', JSON.stringify(res));
 
@@ -1691,76 +1726,10 @@ async function abrirScanner(target){
 }
 
 function _iniciarDeteccao(){
-  if(_scannerRAF) cancelAnimationFrame(_scannerRAF);
-  function loop(){
-    _desenharOverlay();
-    _scannerRAF=requestAnimationFrame(loop);
-  }
-  loop();
+  // Overlay agora e puramente CSS — nada a fazer aqui
 }
 
-function _desenharOverlay(){
-  var video=document.getElementById('scanner-video');
-  var overlay=document.getElementById('scanner-overlay-canvas');
-  if(!video||!overlay||!video.videoWidth) return;
-
-  overlay.width=video.offsetWidth;
-  overlay.height=video.offsetHeight;
-  var ctx=overlay.getContext('2d');
-  ctx.clearRect(0,0,overlay.width,overlay.height);
-
-  var w=overlay.width, h=overlay.height;
-  var margin=Math.min(w,h)*0.08;
-
-  // Se detectou bordas do documento, mostrar contorno verde
-  if(_detectedCorners && _detectedCorners.length===4){
-    ctx.beginPath();
-    ctx.strokeStyle='#1D9E75';
-    ctx.lineWidth=3;
-    ctx.shadowColor='#1D9E75';
-    ctx.shadowBlur=8;
-    _detectedCorners.forEach(function(pt,i){
-      var px=pt.x*w, py=pt.y*h;
-      if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
-    });
-    ctx.closePath();
-    ctx.stroke();
-    // Cantos
-    _detectedCorners.forEach(function(pt){
-      ctx.beginPath();
-      ctx.arc(pt.x*w,pt.y*h,8,0,Math.PI*2);
-      ctx.fillStyle='#1D9E75';
-      ctx.fill();
-    });
-    document.getElementById('scanner-hint').textContent='Documento detectado — pressione Capturar';
-    document.getElementById('scanner-hint').style.color='#5DCAA5';
-  } else {
-    // Guia de enquadramento
-    ctx.strokeStyle='rgba(255,255,255,0.5)';
-    ctx.lineWidth=1.5;
-    ctx.setLineDash([8,6]);
-    ctx.strokeRect(margin,margin,w-margin*2,h-margin*2);
-    ctx.setLineDash([]);
-    // Cantos decorativos
-    var cs=30;
-    [[[margin,margin],[margin+cs,margin],[margin,margin+cs]],
-     [[w-margin,margin],[w-margin-cs,margin],[w-margin,margin+cs]],
-     [[margin,h-margin],[margin+cs,h-margin],[margin,h-margin-cs]],
-     [[w-margin,h-margin],[w-margin-cs,h-margin],[w-margin,h-margin-cs]]
-    ].forEach(function(pts){
-      ctx.beginPath();
-      ctx.strokeStyle='#fff';
-      ctx.lineWidth=3;
-      ctx.moveTo(pts[0][0],pts[0][1]);
-      ctx.lineTo(pts[1][0],pts[1][1]);
-      ctx.moveTo(pts[0][0],pts[0][1]);
-      ctx.lineTo(pts[2][0],pts[2][1]);
-      ctx.stroke();
-    });
-    document.getElementById('scanner-hint').textContent='Enquadre o documento · boa iluminacao · evite sombras';
-    document.getElementById('scanner-hint').style.color='rgba(255,255,255,0.7)';
-  }
-}
+// overlay agora via CSS puro (a4-guide)
 
 function fecharScanner(){
   if(_scannerRAF){cancelAnimationFrame(_scannerRAF);_scannerRAF=null;}
@@ -1779,21 +1748,55 @@ async function capturarScanner(){
   proc.style.display='flex';
   document.getElementById('scan-proc-txt').textContent='Capturando imagem...';
 
-  // Capturar frame em alta resolução
+  // Calcular a região do guia A4 em coordenadas do vídeo real
+  var guide=document.getElementById('a4-guide');
+  var camArea=document.querySelector('.scanner-camera-area');
+  var guideRect=guide.getBoundingClientRect();
+  var camRect=camArea.getBoundingClientRect();
+
+  var vw=video.videoWidth||1280;
+  var vh=video.videoHeight||720;
+  var dispW=camRect.width;
+  var dispH=camRect.height;
+
+  // O vídeo usa object-fit:cover — calcular escala e offset
+  var videoAspect=vw/vh;
+  var dispAspect=dispW/dispH;
+  var scale, offX=0, offY=0;
+  if(videoAspect>dispAspect){
+    // vídeo mais largo — cortado nas laterais
+    scale=vh/dispH;
+    offX=(vw-dispW*scale)/2;
+  } else {
+    // vídeo mais alto — cortado em cima/baixo
+    scale=vw/dispW;
+    offY=(vh-dispH*scale)/2;
+  }
+
+  // Coordenadas do guia no vídeo real
+  var gx=offX+(guideRect.left-camRect.left)*scale;
+  var gy=offY+(guideRect.top-camRect.top)*scale;
+  var gw=guideRect.width*scale;
+  var gh=guideRect.height*scale;
+
+  // Garantir que não sai fora do vídeo
+  gx=Math.max(0,gx); gy=Math.max(0,gy);
+  gw=Math.min(gw,vw-gx); gh=Math.min(gh,vh-gy);
+
+  // Capturar só a região do guia A4
   var capCanvas=document.getElementById('scanner-capture-canvas');
-  capCanvas.width=video.videoWidth||1280;
-  capCanvas.height=video.videoHeight||720;
+  capCanvas.width=Math.round(gw);
+  capCanvas.height=Math.round(gh);
   var ctx=capCanvas.getContext('2d');
-  ctx.drawImage(video,0,0,capCanvas.width,capCanvas.height);
+  ctx.drawImage(video, gx, gy, gw, gh, 0, 0, capCanvas.width, capCanvas.height);
 
   document.getElementById('scan-proc-txt').textContent='Aplicando filtro de scanner...';
 
-  // Processar imagem como scanner
   var resultado;
   try{
     resultado=await _aplicarFiltroScanner(capCanvas);
   }catch(e){
-    console.warn('Filtro scanner falhou, usando imagem original:', e);
+    console.warn('Filtro falhou:', e);
     resultado=capCanvas.toDataURL('image/jpeg',0.92);
   }
 
@@ -1802,9 +1805,8 @@ async function capturarScanner(){
   btn.disabled=false;
   btn.innerHTML='<i class="ti ti-camera"></i>Capturar e Processar';
 
-  // Enviar para OCR
   var filename=_scannerTarget==='nf'?'scanner_nf.jpg':'scanner_comp.jpg';
-  var file=_dataURLtoFile(resultado, filename);
+  var file=_dataURLtoFile(resultado,filename);
   var fakeEvt={target:{files:[file]}};
   if(_scannerTarget==='nf') handleNFFile(fakeEvt);
   else handleFile(fakeEvt);
